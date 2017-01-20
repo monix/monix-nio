@@ -4,8 +4,10 @@ import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
-import collection.JavaConverters._
 
+import monix.execution.UncaughtExceptionReporter
+
+import collection.JavaConverters._
 import scala.util.control.NonFatal
 
 trait AsyncChannel {
@@ -14,10 +16,13 @@ trait AsyncChannel {
   protected def onOpenError(t: Throwable)
   protected def path: Path
 
-  protected def closeChannel(): Option[Throwable] =
-    internalChannel.fold (_ => None, c =>
-      try {c.close(); None}
-      catch {case NonFatal(ex) => Some(ex)})
+  // close channel errors are not exposed as the operation is performed
+  // under the hood, sometimes async, after the communication with
+  // the app has been already closed
+  protected def closeChannel()(implicit reporter: UncaughtExceptionReporter) =
+    internalChannel.fold (_ => (), c =>
+      try {c.close()}
+      catch {case NonFatal(ex) => reporter.reportFailure(ex)})
 
   protected lazy val internalChannel: Either[Throwable, AsynchronousFileChannel] =
     try {

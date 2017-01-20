@@ -32,7 +32,7 @@ import scala.annotation.tailrec
  *
   * @param onCancel: function to be called on the first cancel() invocation
   */
-final class CallbackCancelable private (onCancel: => Any) extends AssignableCancelable {
+final class CallbackCancelable private (onCancel: () => Unit) extends AssignableCancelable {
   import State._
 
   /** Sets the underlying cancelable reference with `s`.
@@ -47,16 +47,23 @@ final class CallbackCancelable private (onCancel: => Any) extends AssignableCanc
     */
   @throws(classOf[IllegalStateException])
   override def `:=`(value: Cancelable): this.type = {
-    // Using getAndSet, which on Java 8 should be faster than
-    // a compare-and-set.
-    val oldState = state.getAndSet(IsActive(value))
+    val win = state.compareAndSet(Empty, IsActive(value))
 
-    oldState match {
-      case Empty => ()
-      case IsEmptyCanceled => value.cancel()
-      case IsCanceled | IsActive(_) =>
-        value.cancel()
-        raiseError()
+    if (!win) {
+      val diffState = state.get
+      diffState match {
+        case IsEmptyCanceled => value.cancel()
+
+        case IsCanceled  =>
+          value.cancel()
+          raiseError()
+
+        case IsActive(v) if v!= value =>
+          value.cancel()
+          raiseError()
+
+        case _ => ()//if we do the assignment twice with the same Cancelable
+       }
     }
 
     this
@@ -67,15 +74,14 @@ final class CallbackCancelable private (onCancel: => Any) extends AssignableCanc
     state.get match {
       case IsCanceled | IsEmptyCanceled => ()
       case ref@ IsActive(s) =>
-        if (state.compareAndSet(ref, IsCanceled)) {
-          onCancel
+        val oldState = state.getAndSet(IsCanceled)
+        if (oldState == ref) {
+          onCancel()
           s.cancel()
-        } else {
-          cancel()
         }
       case Empty =>
         if (!state.compareAndSet(Empty, IsEmptyCanceled)) cancel()
-        else onCancel
+        else onCancel()
     }
   }
 
@@ -89,7 +95,7 @@ final class CallbackCancelable private (onCancel: => Any) extends AssignableCanc
 }
 
 object CallbackCancelable {
-  def  apply(onCancel: => Any): CallbackCancelable =
+  def  apply(onCancel: () => Unit): CallbackCancelable =
     new CallbackCancelable(onCancel)
 
   private sealed trait State

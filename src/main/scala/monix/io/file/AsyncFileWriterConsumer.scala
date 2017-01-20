@@ -75,7 +75,7 @@ class AsyncFileWriterConsumer(
     }
 
     val out = new AsyncFileSubscriber()
-    val conn = CallbackCancelable(out.onCancel())
+    val conn = CallbackCancelable(out.onCancel)
     (out,conn)
   }
 }

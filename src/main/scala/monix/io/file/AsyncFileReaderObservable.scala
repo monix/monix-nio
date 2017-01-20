@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService
 
 import monix.eval.{Callback, Task}
 import monix.execution.Ack.{Continue, Stop}
-import monix.execution.Cancelable
+import monix.execution.{Cancelable, UncaughtExceptionReporter}
 import monix.execution.atomic.Atomic
 import monix.io.file.internal._
 import monix.reactive.Observable
@@ -69,11 +69,15 @@ class AsyncFileReaderObservable(
       } catch {
         case NonFatal(ex) => callback.onError(ex)
       }
-      Cancelable(() => closeChannel())
+      Cancelable(() => closeChannel()(scheduler))
     }
   }
 
-  def loop(subscriber: Subscriber[Array[Byte]], position: Long): Task[Array[Byte]] = {
+  def loop(
+    subscriber: Subscriber[Array[Byte]],
+    position: Long)
+    (implicit rep: UncaughtExceptionReporter): Task[Array[Byte]] = {
+
     buffer.clear()
     createReadTask(buffer, position).flatMap { result =>
       val bytes = Bytes(buffer, result)
