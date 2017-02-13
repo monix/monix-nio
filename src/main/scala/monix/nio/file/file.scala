@@ -1,4 +1,4 @@
-package monix.io
+package monix.nio
 
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService

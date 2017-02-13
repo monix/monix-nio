@@ -1,4 +1,4 @@
-package monix.io
+package monix.nio
 
 import java.nio.file.{Files, Paths}
 import java.util
@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.FunSuite
 import file._
 import monix.eval.Callback
-import monix.io.text.UTF8Codec._
+import monix.nio.text.UTF8Codec._
 import monix.reactive.Observable
 
 import scala.concurrent.{Await, Promise}

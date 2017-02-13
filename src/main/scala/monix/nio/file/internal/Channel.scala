@@ -1,4 +1,4 @@
-package monix.io.file.internal
+package monix.nio.file.internal
 
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}

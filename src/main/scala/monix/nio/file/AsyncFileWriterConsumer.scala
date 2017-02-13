@@ -1,4 +1,4 @@
-package monix.io.file
+package monix.nio.file
 
 import java.nio.ByteBuffer
 import java.nio.channels.CompletionHandler
@@ -10,8 +10,8 @@ import monix.execution.Ack.{Continue, Stop}
 import monix.execution.{Ack, Scheduler}
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.AssignableCancelable
-import monix.io.cancelables.CallbackCancelable
-import monix.io.file.internal.AsyncWriterChannel
+import monix.nio.cancelables.CallbackCancelable
+import monix.nio.file.internal.AsyncWriterChannel
 import monix.reactive.Consumer
 import monix.reactive.observers.Subscriber
 

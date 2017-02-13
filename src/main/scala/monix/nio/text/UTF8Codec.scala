@@ -1,4 +1,4 @@
-package monix.io.text
+package monix.nio.text
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset

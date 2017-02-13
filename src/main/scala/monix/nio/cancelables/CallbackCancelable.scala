@@ -1,9 +1,9 @@
-package monix.io.cancelables
+package monix.nio.cancelables
 
 import monix.execution.Cancelable
 import monix.execution.atomic.AtomicAny
 import monix.execution.cancelables.AssignableCancelable
-import monix.io.cancelables.CallbackCancelable.State
+import monix.nio.cancelables.CallbackCancelable.State
 
 import scala.annotation.tailrec
 

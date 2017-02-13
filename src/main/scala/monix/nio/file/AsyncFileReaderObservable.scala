@@ -1,4 +1,4 @@
-package monix.io.file
+package monix.nio.file
 
 import java.nio.ByteBuffer
 import java.nio.channels.CompletionHandler
@@ -9,7 +9,7 @@ import monix.eval.{Callback, Task}
 import monix.execution.Ack.{Continue, Stop}
 import monix.execution.{Cancelable, UncaughtExceptionReporter}
 import monix.execution.atomic.Atomic
-import monix.io.file.internal._
+import monix.nio.file.internal._
 import monix.reactive.Observable
 import monix.reactive.exceptions.MultipleSubscribersException
 import monix.reactive.observers.Subscriber
