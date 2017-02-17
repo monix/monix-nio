@@ -14,14 +14,14 @@ import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
 
 
-class Test extends FunSuite with LazyLogging{
+class IntegrationTest extends FunSuite with LazyLogging{
 
   test("same file generated") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
     val from = Paths.get(this.getClass.getResource("/testFiles/file.txt").toURI)
     val to = Paths.get("src/test/resources/out.txt")
-    val consumer = new AsyncFileWriterConsumer(to)
+    val consumer = file.writeAsync(to)
     val p = Promise[Boolean]()
     val callback = new Callback[Long] {
       override def onSuccess(value: Long): Unit = p.success(true)
@@ -88,8 +88,4 @@ class Test extends FunSuite with LazyLogging{
       assert(result)
     }
   }
-
-
-
-
 }

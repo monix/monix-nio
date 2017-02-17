@@ -2,8 +2,6 @@ package monix.nio.file
 
 import java.nio.ByteBuffer
 import java.nio.channels.CompletionHandler
-import java.nio.file.{Path, StandardOpenOption}
-import java.util.concurrent.ExecutorService
 
 import monix.eval.Callback
 import monix.execution.Ack.{Continue, Stop}
@@ -11,22 +9,19 @@ import monix.execution.{Ack, Scheduler}
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.AssignableCancelable
 import monix.nio.cancelables.CallbackCancelable
-import monix.nio.file.internal.AsyncWriterChannel
+import monix.nio.file.internal.{AsyncMonixFileChannel, AsyncWriterChannel}
 import monix.reactive.Consumer
 import monix.reactive.observers.Subscriber
 
 import scala.concurrent.{Future, Promise}
 
-class AsyncFileWriterConsumer(
-  path: Path,
-  flags: Seq[StandardOpenOption] = List(StandardOpenOption.CREATE),
-  executorService: Option[ExecutorService] = None) extends Consumer[Array[Byte], Long]{
+class AsyncFileWriterConsumer(channel: AsyncMonixFileChannel) extends Consumer[Array[Byte], Long]{
 
   override def createSubscriber(
     cb: Callback[Long],
     s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
 
-    class AsyncFileSubscriber extends AsyncWriterChannel(path, flags, executorService) with  Subscriber[Array[Byte]] {
+    class AsyncFileSubscriber extends AsyncWriterChannel(channel) with  Subscriber[Array[Byte]] {
       implicit val scheduler = s
 
       private[this] var position = 0

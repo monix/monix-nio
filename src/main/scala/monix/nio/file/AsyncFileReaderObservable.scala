@@ -2,8 +2,6 @@ package monix.nio.file
 
 import java.nio.ByteBuffer
 import java.nio.channels.CompletionHandler
-import java.nio.file.{Path, StandardOpenOption}
-import java.util.concurrent.ExecutorService
 
 import monix.eval.{Callback, Task}
 import monix.execution.Ack.{Continue, Stop}
@@ -16,12 +14,8 @@ import monix.reactive.observers.Subscriber
 
 import scala.util.control.NonFatal
 
-class AsyncFileReaderObservable(
-  path: Path,
-  size: Int,
-  flags: List[StandardOpenOption] = List(StandardOpenOption.CREATE),
-  executorService: Option[ExecutorService] = None)
-  extends AsyncReadChannel(path, flags, executorService) with Observable[Array[Byte]]{
+class AsyncFileReaderObservable(channel: AsyncMonixFileChannel, size: Int)
+  extends AsyncReadChannel(channel) with Observable[Array[Byte]]{
   private[this] val wasSubscribed = Atomic(false)
   private[this] val buffer = ByteBuffer.allocate(size)
 
