@@ -7,6 +7,7 @@ import monix.eval.{Callback, Task}
 import monix.execution.Ack.{Continue, Stop}
 import monix.execution.{Cancelable, UncaughtExceptionReporter}
 import monix.execution.atomic.Atomic
+import monix.nio.cancelables.CallbackCancelable
 import monix.nio.file.internal._
 import monix.reactive.Observable
 import monix.reactive.exceptions.MultipleSubscribersException
@@ -36,9 +37,13 @@ class AsyncFileReaderObservable(channel: AsyncMonixFileChannel, size: Int)
           }
         }
 
-        Task.defer(loop(subscriber, 0))
+        val c = Task.defer(loop(subscriber, 0))
           .executeWithOptions(_.enableAutoCancelableRunLoops)
           .runAsync(taskCallback)
+        CallbackCancelable(() => {
+          closeChannel()
+          c.cancel()
+        })
       }
       catch {
         case NonFatal(e) =>

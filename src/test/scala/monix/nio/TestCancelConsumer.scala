@@ -87,20 +87,19 @@ object TestCancelConsumer extends TestSuite[TestScheduler] with LazyLogging{
 
     val cancelable = reader.consumeWith(consumer).runAsync
 
-    s.tickOne() //observable defer runnable
-    s.tickOne() //read
-    s.tickOne() //async read task execution and write
-    //s.tickOne() //async write
-    //s.tickOne() //observable continue
+    //we need 3 ticks for a complete run of an elem
+    s.tickOne()
+    s.tickOne()
+    s.tickOne()
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assertEquals(writeTo.get.size, 1)
 
-    //s.tickOne() //observable defer runnable
-    //s.tickOne() //read
-    s.tickOne() //async read task execution and write
-    s.tickOne() //async write
-    s.tickOne() //observable continue
+    //we need 3 ticks for a complete run of an elem
+    s.tickOne()
+    s.tickOne()
+    s.tickOne()
+
     //check 2 reads have occurred
     assert(writeTo.get.size==2)
     //cancel the consumer
@@ -113,8 +112,8 @@ object TestCancelConsumer extends TestSuite[TestScheduler] with LazyLogging{
     assertEquals(readChannel.getBytesReadPosition, 2)
     assertEquals(writeChannel.getBytesWritePosition, 2)
     assertEquals(writeTo.get.size, 2)
-    assert(writeChannel.isClosed)
     assert(readChannel.isClosed)
+    assert(writeChannel.isClosed)
     //check no other read has occurred
 
   }

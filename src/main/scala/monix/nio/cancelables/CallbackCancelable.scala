@@ -26,7 +26,7 @@ import scala.annotation.tailrec
   * {{{
   *   val s = CallbackCancellable(println("TTT")
  *
- *   s.cancel() ///TTT is printed
+ *    s.cancel() ///TTT is printed
   *   s.cancel() ///nothing is printed
   * }}}
  *
