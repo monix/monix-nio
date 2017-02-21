@@ -29,7 +29,9 @@ class AsyncFileReaderObservable(channel: AsyncMonixFileChannel, size: Int)
     else {
       try {
         val taskCallback = new Callback[Array[Byte]]() {
-          override def onSuccess(value: Array[Byte]): Unit = ()
+          override def onSuccess(value: Array[Byte]): Unit = {
+            closeChannel()
+          }
 
           override def onError(ex: Throwable): Unit = {
             closeChannel()
@@ -48,6 +50,7 @@ class AsyncFileReaderObservable(channel: AsyncMonixFileChannel, size: Int)
       catch {
         case NonFatal(e) =>
           subscriber.onError(e)
+          closeChannel()
           Cancelable.empty
       }
     }
@@ -58,7 +61,6 @@ class AsyncFileReaderObservable(channel: AsyncMonixFileChannel, size: Int)
       val handler = new CompletionHandler[Integer, Null] {
         override def completed(result: Integer, attachment: Null): Unit =
           callback.onSuccess(result)
-
         override def failed(exc: Throwable, attachment: Null): Unit =
           callback.onError(exc)
       }
@@ -82,7 +84,6 @@ class AsyncFileReaderObservable(channel: AsyncMonixFileChannel, size: Int)
       val bytes = Bytes(buffer, result)
       bytes match {
         case EmptyBytes =>
-          closeChannel()
           subscriber.onComplete()
           Task.now(Array.empty)
 
@@ -92,7 +93,6 @@ class AsyncFileReaderObservable(channel: AsyncMonixFileChannel, size: Int)
               loop(subscriber, position + result)
 
             case Stop =>
-              closeChannel()
               Task.now(Array.empty)
           }
       }

@@ -7,6 +7,7 @@ import monix.nio.file.internal.AsyncMonixFileChannel
 
 package object file {
   def readAsync(path: Path, chunkSize: Int, executorService: Option[ExecutorService] = None): AsyncFileReaderObservable ={
+    require(chunkSize > 1)
     val channel = AsyncMonixFileChannel.openRead(path, Set.empty, executorService)
     new AsyncFileReaderObservable(channel, chunkSize)
   }

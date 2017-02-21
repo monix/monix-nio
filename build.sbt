@@ -58,7 +58,8 @@ val appSettings = Seq(
     "org.scalatest" %% "scalatest" % "3.0.0" % "test",
     "io.monix" %% "minitest" % "0.27" % "test"
   ),
-  testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
+  testFrameworks ++= Seq(
+    new TestFramework("minitest.runner.Framework")),
   publishArtifact in (Compile, packageDoc) := false,
   publishArtifact in packageDoc := false,
   sources in (Compile,doc) := Seq.empty,
