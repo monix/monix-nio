@@ -1,4 +1,4 @@
-val monixVersion = "2.1.2"
+val monixVersion = "2.2.2"
 val appSettings = Seq(
   version := "0.0.1",
   organization := "monix",
@@ -55,8 +55,11 @@ val appSettings = Seq(
     "org.slf4j" % "log4j-over-slf4j" % "1.7.21",
     // For testing ...
     "ch.qos.logback" % "logback-classic" % "1.1.3" % "test",
-    "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+    "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+    "io.monix" %% "minitest" % "0.27" % "test"
   ),
+  testFrameworks ++= Seq(
+    new TestFramework("minitest.runner.Framework")),
   publishArtifact in (Compile, packageDoc) := false,
   publishArtifact in packageDoc := false,
   sources in (Compile,doc) := Seq.empty,
