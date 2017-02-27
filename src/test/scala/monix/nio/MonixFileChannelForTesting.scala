@@ -1,14 +1,12 @@
 package monix.nio
 
 import java.nio.ByteBuffer
-import java.nio.channels.CompletionHandler
 
 import monix.eval.{Callback, Task}
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
-import monix.nio.file.internal.AsyncMonixFileChannel
 
-class MonixFileChannelForTesting(readingSeq: Vector[Array[Byte]], writeSeq: Atomic[Vector[Array[Byte]]])(implicit s: Scheduler) extends AsyncMonixFileChannel {
+class MonixFileChannelForTesting(readingSeq: Vector[Array[Byte]], writeSeq: Atomic[Vector[Array[Byte]]])(implicit s: Scheduler) extends AsyncMonixChannel {
   private val readChannelPosition = Atomic(0)
   private val writeChannelPosition = Atomic(0)
   private val channelClosed = Atomic(false)
@@ -19,17 +17,17 @@ class MonixFileChannelForTesting(readingSeq: Vector[Array[Byte]], writeSeq: Atom
   def getBytesReadPosition = readChannelPosition.get
   def getBytesWritePosition = writeChannelPosition.get
 
-  def taskCallback(handler: CompletionHandler[Integer, Null]) = new Callback[Array[Byte]]() {
-    override def onSuccess(value: Array[Byte]): Unit = handler.completed(value.length, null)
-    override def onError(ex: Throwable): Unit = handler.failed(ex, null)
+  def taskCallback(handler: Callback[Int]) = new Callback[Array[Byte]]() {
+    override def onSuccess(value: Array[Byte]): Unit = handler.onSuccess(value.length)
+    override def onError(ex: Throwable): Unit = handler.onError(ex)
   }
 
   def createReadException() = readException.set(true)
   def createWriteException() = writeException.set(true)
 
   def size(): Long = 0 //not really used
-  def readChannel(dst: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) = {
-    if (readException.get) handler.failed(new Exception("Test Exception"), null)
+  def read(dst: ByteBuffer, position: Long, handler: Callback[Int]) = {
+    if (readException.get) handler.onError(new Exception("Test Exception"))
     else if (readChannelPosition.get < readingSeq.size) {
       val pos = readChannelPosition.getAndIncrement()
 
@@ -40,12 +38,12 @@ class MonixFileChannelForTesting(readingSeq: Vector[Array[Byte]], writeSeq: Atom
       }
       r.runAsync(taskCallback(handler))
     } else {
-      handler.completed(-1, null)
+      handler.onSuccess(-1)
     }
 
   }
-  def write(b: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) = {
-    if (writeException.get) handler.failed(new Exception("Test Exception"), null)
+  def write(b: ByteBuffer, position: Long, handler: Callback[Int]) = {
+    if (writeException.get) handler.onError(new Exception("Test Exception"))
     else {
       val pos = writeChannelPosition.getAndIncrement()
       val r = Task {

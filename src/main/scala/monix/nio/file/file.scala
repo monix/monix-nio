@@ -6,15 +6,19 @@ import java.util.concurrent.ExecutorService
 import monix.nio.file.internal.AsyncMonixFileChannel
 
 package object file {
-  def readAsync(path: Path, chunkSize: Int, executorService: Option[ExecutorService] = None): AsyncFileReaderObservable ={
+  def readAsync(path: Path, chunkSize: Int, executorService: Option[ExecutorService] = None, onOpenError: Throwable => Unit = _ =>()): AsyncFileReaderObservable ={
     require(chunkSize > 1)
-    val channel = AsyncMonixFileChannel.openRead(path, Set.empty, executorService)
+    val channel = AsyncMonixFileChannel.openRead(path, Set.empty, executorService, onOpenError)
     new AsyncFileReaderObservable(channel, chunkSize)
   }
 
-  def writeAsync(path: Path, flags: Seq[StandardOpenOption] = Seq.empty, executorService: Option[ExecutorService] = None): AsyncFileWriterConsumer = {
-    val channel = AsyncMonixFileChannel.openWrite(path, flags.toSet, executorService)
-    new AsyncFileWriterConsumer(channel)
+  def writeAsync(path: Path, flags: Seq[StandardOpenOption] = Seq.empty, executorService: Option[ExecutorService] = None, onOpenError: Throwable => Unit = _ =>()): AsyncFileWriterConsumer = {
+    appendAsync(path, 0, flags, executorService, onOpenError)
+  }
+
+  def appendAsync(path: Path, startPosition: Long, flags: Seq[StandardOpenOption] = Seq.empty, executorService: Option[ExecutorService] = None, onOpenError: Throwable => Unit = _ =>()): AsyncFileWriterConsumer = {
+    val channel = AsyncMonixFileChannel.openWrite(path, flags.toSet, executorService, onOpenError)
+    new AsyncFileWriterConsumer(channel, startPosition)
   }
 
 }

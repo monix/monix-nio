@@ -5,15 +5,17 @@ import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
 
+import monix.eval.Callback
 import monix.execution.UncaughtExceptionReporter
 import monix.execution.atomic.Atomic
+import monix.execution.exceptions.APIContractViolationException
+import monix.nio.AsyncMonixChannel
 
 import collection.JavaConverters._
 import scala.util.control.NonFatal
 
-trait AsyncChannel {
-  protected def onOpenError(t: Throwable)
-  def channel: AsyncMonixFileChannel
+sealed trait AsyncChannel{
+  def channel: AsyncMonixChannel
   private val channelOpen = Atomic(true)
 
   // close channel errors are not exposed as the operation is performed
@@ -29,22 +31,16 @@ trait AsyncChannel {
     }
 }
 
-
-private[nio] trait AsyncMonixFileChannel extends AutoCloseable{
-  def size(): Long
-  def readChannel(dst: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null])
-  def write(b: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null])
-  def close()
-}
-
-case object NotInitializedMonixFileChannel extends AsyncMonixFileChannel {
+private[internal] case object NotInitializedMonixFileChannel extends AsyncMonixChannel {
   def size(): Long = 0
-  def readChannel(dst: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) = ()
-  def write(b: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) = ()
   def close() = ()
+  override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
+    callback.onError(APIContractViolationException(s"can't read on ${this.getClass.getName}"))
+  override def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
+    callback.onError(APIContractViolationException(s"can't read on ${this.getClass.getName}"))
 }
 
-object AsyncMonixFileChannel {
+private[file] object AsyncMonixFileChannel {
   def openUnsafe(
     path: Path,
     options: Set[StandardOpenOption],
@@ -76,7 +72,7 @@ object AsyncMonixFileChannel {
 
 }
 
-private[internal] case class AsyncMonixFileChannelWrapper(asyncFileChannel: AsynchronousFileChannel) extends AsyncMonixFileChannel{
+private[internal] case class AsyncMonixFileChannelWrapper(asyncFileChannel: AsynchronousFileChannel) extends AsyncMonixChannel{
   override def size() = asyncFileChannel.size()
   def readChannel(dst: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) =
     asyncFileChannel.read(dst, position, attachment, handler)
@@ -88,14 +84,30 @@ private[internal] case class AsyncMonixFileChannelWrapper(asyncFileChannel: Asyn
     asyncFileChannel.close()
   }
 
+  override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit = {
+    val handler = new CompletionHandler[Integer, Null] {
+      override def completed(result: Integer, attachment: Null) = callback.onSuccess(result)
+      override def failed(exc: Throwable, attachment: Null) = callback.onError(exc)
+    }
+    asyncFileChannel.read(dst, position, null, handler)
+  }
+
+  override def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit = {
+    val handler = new CompletionHandler[Integer, Null] {
+      override def completed(result: Integer, attachment: Null) = callback.onSuccess(result)
+      override def failed(exc: Throwable, attachment: Null) = callback.onError(exc)
+    }
+    asyncFileChannel.write(b, position, null, handler)
+  }
 }
 
-abstract class AsyncReadChannel(val channel: AsyncMonixFileChannel) extends AsyncChannel {
-  protected def readChannel (dst: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) =
-    channel.readChannel(dst, position, attachment, handler)
+private[nio] abstract class AsyncReadChannel(val channel: AsyncMonixChannel) extends AsyncChannel {
+  protected def read(dst: ByteBuffer, position: Long, callback: Callback[Int]) =
+    channel.read(dst, position, callback)
 }
 
-abstract class AsyncWriterChannel(val channel: AsyncMonixFileChannel) extends AsyncChannel {
-  protected def write(b: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) =
-    channel.write(b, position,  attachment, handler)
+
+private[nio] abstract class AsyncWriterChannel(val channel: AsyncMonixChannel) extends AsyncChannel {
+  protected def write(b: ByteBuffer, position: Long, callback: Callback[Int]) =
+    channel.write(b, position,  callback)
 }

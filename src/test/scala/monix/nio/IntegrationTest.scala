@@ -1,21 +1,19 @@
 package monix.nio
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util
 
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.FunSuite
 import file._
 import monix.eval.Callback
-import monix.nio.text.UTF8Codec._
-import monix.reactive.Observable
 
 import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 
 class IntegrationTest extends FunSuite with LazyLogging{
-
   test("same file generated") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
@@ -36,56 +34,41 @@ class IntegrationTest extends FunSuite with LazyLogging{
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
+    Files.delete(to)//clean
     assert(util.Arrays.equals(f1, f2))
-
-    //clean
-    Files.delete(to)
   }
 
-  test("decode file utf8") {
+  test("add data to existing file") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
-    val from = Paths.get(this.getClass.getResource("/testFiles/specialChars.txt").toURI)
+    val from = Paths.get(this.getClass.getResource("/testFiles/file.txt").toURI)
+    val to = Paths.get("src/test/resources/existing.txt")
+    val strSeq = Seq("A", "\u0024", "\u00A2", "\u20AC", new String(Array(0xF0, 0x90, 0x8D, 0x88).map(_.toByte)), "B")
 
-    val p = Promise[Seq[Byte]]()
-    val callback = new Callback[List[Array[Byte]]] {
-      override def onSuccess(value: List[Array[Byte]]): Unit = p.success(value.flatten)
+    try {
+      Files.write(to, strSeq.flatMap(_.getBytes).toArray, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+    } catch {
+      case NonFatal(e) => fail(s"got error: $e")
+    }
+    val consumer = file.appendAsync(to, Files.size(to))
+    val p = Promise[Boolean]()
+    val callback = new Callback[Long] {
+      override def onSuccess(value: Long): Unit = p.success(true)
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }
 
     readAsync(from, 3)
-      .pipeThrough(utf8Decode)
-      .pipeThrough(utf8Encode)
-      .toListL
+      .consumeWith(consumer)
       .runAsync(callback)
     val result = Await.result(p.future, 3.second)
+    assert(result, true)
+
     val f1 = Files.readAllBytes(from)
-    val f2 = result
-    assert(util.Arrays.equals(f1, f2.toArray))
+    val f2 = Files.readAllBytes(to)
+    Files.delete(to)//clean
+    val all1: Seq[Byte] = strSeq.flatMap(_.getBytes) ++ f1.toSeq
+    assert(all1 === f2.toSeq)
+
   }
 
-  test("decode special chars") {
-    implicit val ctx = monix.execution.Scheduler.Implicits.global
-    val strSeq = Seq("A", "\u0024", "\u00A2", "\u20AC", new String(Array(0xF0, 0x90, 0x8D, 0x88).map(_.toByte)), "B")
-
-    for (grouping <- 1 to 12) {
-      val obsSeq =
-        Observable
-          .fromIterator(strSeq.flatMap(_.getBytes).grouped(grouping).map(_.toArray))
-          .pipeThrough(utf8Decode)
-
-      val p = Promise[Boolean]()
-      val callback = new Callback[List[String]] {
-        override def onSuccess(value: List[String]): Unit = {
-          p.success(if (value.mkString == strSeq.mkString) true else false)
-        }
-
-        override def onError(ex: Throwable): Unit = p.failure(ex)
-      }
-      obsSeq.toListL.runAsync(callback)
-      val result = Await.result(p.future, 3.second)
-      if (!result) info(s"grouping=$grouping")
-      assert(result)
-    }
-  }
 }

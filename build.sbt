@@ -1,4 +1,4 @@
-val monixVersion = "2.2.1"
+val monixVersion = "2.2.2"
 val appSettings = Seq(
   version := "0.0.1",
   organization := "monix",

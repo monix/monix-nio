@@ -5,8 +5,8 @@ import java.nio.charset.Charset
 
 import monix.execution.Ack.{Continue, Stop}
 import monix.execution.atomic.Atomic
+import monix.execution.exceptions.APIContractViolationException
 import monix.execution.{Ack, Cancelable}
-import monix.reactive.exceptions.MultipleSubscribersException
 import monix.reactive.observers.Subscriber
 import monix.reactive.subjects.Subject
 import monix.reactive.{Observable, Observer, Pipe}
@@ -40,7 +40,7 @@ object UTF8Codec {
 
     override def unsafeSubscribeFn(subscriber: Subscriber[String]): Cancelable = {
       if (!this.subscriber.compareAndSet(None, Some(subscriber))) {
-        subscriber.onError(MultipleSubscribersException(this.getClass.getName))
+        subscriber.onError(APIContractViolationException(this.getClass.getName))
         Cancelable.empty
       } else {
         remaining.put(0,0)
@@ -123,7 +123,7 @@ object UTF8Codec {
 
     override def unsafeSubscribeFn(subscriber: Subscriber[Array[Byte]]): Cancelable = {
       if (!this.subscriber.compareAndSet(None, Some(subscriber))) {
-        subscriber.onError(MultipleSubscribersException(this.getClass.getName))
+        subscriber.onError(APIContractViolationException(this.getClass.getName))
         Cancelable.empty
       } else {
         Cancelable(() => stopOnNext.set(true))
