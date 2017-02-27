@@ -32,11 +32,7 @@ val appSettings = Seq(
       .withWarnScalaVersionEviction(false),
   libraryDependencies ++= Seq(
     "io.monix" %% "monix-reactive" % monixVersion,
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
-    "com.typesafe" % "config" % "1.3.0",
-    "org.slf4j" % "log4j-over-slf4j" % "1.7.21",
     // For testing ...
-    "ch.qos.logback" % "logback-classic" % "1.1.3" % "test",
     "org.scalatest" %% "scalatest" % "3.0.0" % "test",
     "io.monix" %% "minitest" % "0.27" % "test"
   ),

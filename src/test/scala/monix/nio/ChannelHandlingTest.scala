@@ -2,14 +2,13 @@ package monix.nio
 
 import java.nio.file.{Files, Paths}
 
-import com.typesafe.scalalogging.LazyLogging
 import minitest.TestSuite
 import monix.eval.Callback
 import monix.execution.atomic.Atomic
 import monix.execution.schedulers.TestScheduler
 import monix.nio.file.{AsyncFileReaderObservable, AsyncFileWriterConsumer}
 
-object ChannelHandlingTest extends TestSuite[TestScheduler] with LazyLogging{
+object ChannelHandlingTest extends TestSuite[TestScheduler] {
   def setup(): TestScheduler = TestScheduler()
 
   def tearDown(s: TestScheduler): Unit = {

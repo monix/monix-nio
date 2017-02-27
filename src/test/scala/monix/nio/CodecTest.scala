@@ -3,7 +3,6 @@ package monix.nio
 import java.nio.file.{Files, Paths}
 import java.util
 
-import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Callback
 import monix.nio.text.UTF8Codec.{utf8Decode, utf8Encode}
 import monix.reactive.Observable
@@ -13,7 +12,7 @@ import file._
 import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
 
-class CodecTest extends FunSuite with LazyLogging{
+class CodecTest extends FunSuite {
 
   test("decode file utf8") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
@@ -77,7 +76,7 @@ class CodecTest extends FunSuite with LazyLogging{
     readAsync(from, 3)
       .pipeThrough(utf8Decode)
       .map{ str =>
-        Console.println(str)
+        //Console.println(str)
         str
       }
       .pipeThrough(utf8Encode)
