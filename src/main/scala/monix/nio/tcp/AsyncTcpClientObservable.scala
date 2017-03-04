@@ -15,7 +15,7 @@ import monix.reactive.observers.Subscriber
 
 import scala.util.control.NonFatal
 
-class AsyncTcpClient(host: String, port: Int, buffSize: Int = 256 * 1024) extends Observable[Array[Byte]] {
+class AsyncTcpClientObservable(host: String, port: Int, buffSize: Int = 256 * 1024) extends Observable[Array[Byte]] {
 
   private[this] val client = Client(
     new InetSocketAddress(host, port),

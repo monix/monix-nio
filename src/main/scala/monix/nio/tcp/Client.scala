@@ -61,4 +61,20 @@ private case class Client(
       if(c.isOpen) c.read(dst, 0l, TimeUnit.MILLISECONDS, null, handler)
     })
   }
+
+  protected[tcp] def writeChannel(src: ByteBuffer, callback: Callback[Int]): Unit = {
+    val handler = new CompletionHandler[Integer, Null] {
+      override def completed(result: Integer, attachment: Null) = {
+        callback.onSuccess(result)
+      }
+      override def failed(exc: Throwable, attachment: Null) = exc match {
+        case _: java.nio.channels.AsynchronousCloseException => ()
+        case _ => callback.onError(exc)
+      }
+    }
+
+    socketChannel.fold(_ => (), { c =>
+      if(c.isOpen) c.write(src, 0l, TimeUnit.MILLISECONDS, null, handler)
+    })
+  }
 }
