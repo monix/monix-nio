@@ -3,7 +3,6 @@ package monix.nio
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util
 
-import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.FunSuite
 import file._
 import monix.eval.Callback
@@ -13,7 +12,7 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 
-class IntegrationTest extends FunSuite with LazyLogging{
+class IntegrationTest extends FunSuite {
   test("same file generated") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
