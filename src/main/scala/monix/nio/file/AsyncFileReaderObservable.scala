@@ -8,7 +8,7 @@ import monix.execution.{Cancelable, UncaughtExceptionReporter}
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignmentCancelable
 import monix.execution.exceptions.APIContractViolationException
-import monix.nio.AsyncMonixChannel
+import monix.nio.{AsyncMonixChannel, Bytes, EmptyBytes, NonEmptyBytes}
 import monix.nio.cancelables.SingleFunctionCallCancelable
 import monix.nio.file.internal._
 import monix.reactive.Observable
