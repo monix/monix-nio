@@ -2,7 +2,6 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.util.concurrent.CountDownLatch
 
 import monix.eval.Callback
 import monix.execution.Ack.{Continue, Stop}
@@ -13,19 +12,15 @@ import monix.nio.cancelables.SingleFunctionCallCancelable
 import monix.reactive.Consumer
 import monix.reactive.observers.Subscriber
 
-import scala.concurrent.duration._
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 
-class AsyncTcpClientConsumer private[tcp] (
-  host: String,
-  port: Int,
-  timeout: FiniteDuration = 60.seconds) extends Consumer[Array[Byte], Long] {
+class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Consumer[Array[Byte], Long] {
 
   private[this] var socketClient: Option[SocketClient] = None
 
-  private[tcp] def this(client: SocketClient, timeout: FiniteDuration) {
-    this(client.to.getHostString, client.to.getPort, timeout)
+  private[tcp] def this(client: SocketClient) {
+    this(client.to.getHostString, client.to.getPort)
     this.socketClient = Option(client)
   }
 
@@ -36,13 +31,13 @@ class AsyncTcpClientConsumer private[tcp] (
       private[this] val callbackCalled = Atomic(false)
       private[this] var written = 0L
 
-      private[this] val connectedSignal = new CountDownLatch(1)
+      private[this] val connectedSignal = Promise[Unit]()
       private[this] val connectCallback = new Callback[Void]() {
         override def onSuccess(value: Void): Unit = {
-          connectedSignal.countDown()
+          connectedSignal.success(())
         }
         override def onError(ex: Throwable): Unit = {
-          connectedSignal.countDown()
+          connectedSignal.failure(ex)
           closeChannel()
           self.onError(ex)
         }
@@ -50,7 +45,7 @@ class AsyncTcpClientConsumer private[tcp] (
 
       def init() = {
         if (socketClient.isDefined) {
-          connectedSignal.countDown()
+          connectedSignal.success(())
         }
         else {
           socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = self.onError))
@@ -74,10 +69,8 @@ class AsyncTcpClientConsumer private[tcp] (
         sendError(ex)
       }
 
-      override def onNext(elem: Array[Byte]): Future[Ack] = {
+      override def onNext(elem: Array[Byte]): Future[Ack] = connectedSignal.future.flatMap { _ =>
         val promise = Promise[Ack]()
-        connectedSignal.await(timeout.length, timeout.unit)
-
         socketClient.foreach { sc =>
           try {
             sc.writeChannel(ByteBuffer.wrap(elem), new Callback[Int] {

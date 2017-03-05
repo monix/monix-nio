@@ -41,8 +41,13 @@ private case class SocketClient(
 
   protected[tcp] def connect(callback: Callback[Void]): Unit = {
     val handler = new CompletionHandler[Void, Null] {
-      override def completed(result: Void, attachment: Null) = callback.onSuccess(result)
-      override def failed(exc: Throwable, attachment: Null) = callback.onError(exc)
+      override def completed(result: Void, attachment: Null) = {
+        callback.onSuccess(result)
+      }
+      override def failed(exc: Throwable, attachment: Null) = exc match {
+        case _: java.nio.channels.AsynchronousCloseException => ()
+        case _ => callback.onError(exc)
+      }
     }
     socketChannel.fold(_ => (), c => c.connect(to, null, handler))
   }

@@ -2,7 +2,6 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.util.concurrent.CountDownLatch
 
 import monix.eval.{Callback, Task}
 import monix.execution.Ack.{Continue, Stop}
@@ -15,25 +14,23 @@ import monix.nio.cancelables.SingleFunctionCallCancelable
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 
-import scala.concurrent.duration._
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 class AsyncTcpClientObservable private[tcp] (
-  host: String,
-  port: Int,
-  timeout: FiniteDuration = 60.seconds,
+  host: String, port: Int,
   buffSize: Int = 256 * 1024) extends Observable[Array[Byte]] {
 
   private[tcp] var socketClient: Option[SocketClient] = None
 
-  private[tcp] def this(client: SocketClient, timeout: FiniteDuration, buffSize: Int) {
-    this(client.to.getHostString, client.to.getPort, timeout, buffSize)
+  private[tcp] def this(client: SocketClient, buffSize: Int) {
+    this(client.to.getHostString, client.to.getPort, buffSize)
     this.socketClient = Option(client)
   }
 
   private[this] val buffer = ByteBuffer.allocate(buffSize)
   private[this] val wasSubscribed = Atomic(false)
-  private[this] val connectedSignal = new CountDownLatch(1)
+  private[this] val connectedSignal = Promise[Unit]()
 
   override def unsafeSubscribeFn(subscriber: Subscriber[Array[Byte]]): Cancelable = {
     import subscriber.scheduler
@@ -41,27 +38,33 @@ class AsyncTcpClientObservable private[tcp] (
       subscriber.onError(APIContractViolationException(this.getClass.getName))
       Cancelable.empty
     }
-    else try {
-      init(subscriber)
-      startReading(subscriber)
-    } catch {
-      case NonFatal(e) => subscriber.onError(e); closeChannel(); Cancelable.empty
+    else {
+      try {
+        init(subscriber)
+        startReading(subscriber)
+      }
+      catch {
+        case NonFatal(e) =>
+          subscriber.onError(e)
+          closeChannel()
+          Cancelable.empty
+      }
     }
   }
 
   private def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler
     if (socketClient.isDefined) {
-      connectedSignal.countDown()
+      connectedSignal.success(())
     }
     else {
       socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = subscriber.onError))
       val connectCallback = new Callback[Void]() {
         override def onSuccess(value: Void): Unit = {
-          connectedSignal.countDown()
+          connectedSignal.success(())
         }
         override def onError(ex: Throwable): Unit = {
-          connectedSignal.countDown()
+          connectedSignal.failure(ex)
           closeChannel()
           subscriber.onError(ex)
         }
@@ -77,24 +80,28 @@ class AsyncTcpClientObservable private[tcp] (
 
   private def startReading(subscriber: Subscriber[Array[Byte]]): Cancelable = {
     import subscriber.scheduler
-
-    connectedSignal.await(timeout.length, timeout.unit)
-
     val taskCallback = new Callback[Array[Byte]]() {
       override def onSuccess(value: Array[Byte]): Unit = {
         closeChannel()
       }
+
       override def onError(ex: Throwable): Unit = {
         closeChannel()
         subscriber.onError(ex)
       }
     }
+
     val cancelable = Task
-      .defer(loop(subscriber))
-      .executeWithOptions(_.enableAutoCancelableRunLoops)
+      .fromFuture(connectedSignal.future)
+      .flatMap { _ =>
+        loop(subscriber).executeWithOptions(_.enableAutoCancelableRunLoops)
+      }
       .runAsync(taskCallback)
 
-    val singleFunctionCallCancelable = SingleFunctionCallCancelable(() => { cancelable.cancel(); closeChannel()})
+    val singleFunctionCallCancelable = SingleFunctionCallCancelable(() => {
+      cancelable.cancel()
+      closeChannel()
+    })
     SingleAssignmentCancelable.plusOne(singleFunctionCallCancelable)
   }
 

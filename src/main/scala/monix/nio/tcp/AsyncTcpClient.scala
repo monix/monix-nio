@@ -1,38 +1,31 @@
 package monix.nio.tcp
 
-import java.net.InetSocketAddress
-import java.util.concurrent.CountDownLatch
-
 import monix.eval.{Callback, Task}
 
-import scala.concurrent.duration._
-
 class AsyncTcpClient private (
-  host: String,
-  port: Int,
-  timeout: FiniteDuration,
+  host: String, port: Int,
   bufferSize: Int,
-  onOpenError: Throwable => Unit) {
+  onOpenError: Throwable => Unit)(implicit ec: scala.concurrent.ExecutionContext) {
 
   private[this] val underlyingSocketClient = SocketClient(
-    new InetSocketAddress(host, port),
+    new java.net.InetSocketAddress(host, port),
     onOpenError = onOpenError,
     closeOnComplete = false)
-  private[this] val connectedSignal = new CountDownLatch(1)
+  private[this] val connectedSignal = scala.concurrent.Promise[Unit]()
   private[this] val connectCallback = new Callback[Void]() {
     override def onSuccess(value: Void): Unit = {
-      connectedSignal.countDown()
+      connectedSignal.success(())
     }
     override def onError(ex: Throwable): Unit = {
-      connectedSignal.countDown()
+      connectedSignal.failure(ex)
       onOpenError(ex)
     }
   }
 
   private[this] lazy val asyncTcpClientObservable =
-    new AsyncTcpClientObservable(underlyingSocketClient, timeout, bufferSize)
+    new AsyncTcpClientObservable(underlyingSocketClient, bufferSize)
   private[this] lazy val asyncTcpClientConsumer =
-    new AsyncTcpClientConsumer(underlyingSocketClient, timeout)
+    new AsyncTcpClientConsumer(underlyingSocketClient)
 
   /**
     * The TCP client reader.
@@ -41,17 +34,15 @@ class AsyncTcpClient private (
     * by using a [[monix.reactive.observers.Subscriber]]
     * and signal [[monix.execution.Ack.Stop]] or cancel it
     */
-  def tcpObservable: Task[AsyncTcpClientObservable] = Task {
-    connectedSignal.await()
-    asyncTcpClientObservable
+  def tcpObservable: Task[AsyncTcpClientObservable] = Task.fromFuture {
+    connectedSignal.future.map(_ => asyncTcpClientObservable)
   }
 
   /**
     * The TCP client writer
     */
-  def tcpConsumer: Task[AsyncTcpClientConsumer] = Task {
-    connectedSignal.await()
-    asyncTcpClientConsumer
+  def tcpConsumer: Task[AsyncTcpClientConsumer] = Task.fromFuture {
+    connectedSignal.future.map(_ => asyncTcpClientConsumer)
   }
 
   private def init(): Unit = {
@@ -61,19 +52,18 @@ class AsyncTcpClient private (
 
 object AsyncTcpClient {
 
-  def tcpReader(host: String, port: Int, timeout: FiniteDuration = 60.seconds, bufferSize: Int = 256 * 1024) =
-    new AsyncTcpClientObservable(host, port, timeout, bufferSize)
+  def tcpReader(host: String, port: Int, bufferSize: Int = 256 * 1024) =
+    new AsyncTcpClientObservable(host, port, bufferSize)
 
-  def tcpWriter(host: String, port: Int, timeout: FiniteDuration = 60.seconds) =
-    new AsyncTcpClientConsumer(host, port, timeout)
+  def tcpWriter(host: String, port: Int) =
+    new AsyncTcpClientConsumer(host, port)
 
   def apply(
     host: String, port: Int,
-    timeout: FiniteDuration = 60.seconds,
     bufferSize: Int = 256 * 1024,
-    onOpenError: Throwable => Unit = _ => ()): AsyncTcpClient = {
+    onOpenError: Throwable => Unit = _ => ())(implicit ec: scala.concurrent.ExecutionContext): AsyncTcpClient = {
 
-    val asyncTcpClient = new AsyncTcpClient(host, port, timeout, bufferSize, onOpenError)
+    val asyncTcpClient = new AsyncTcpClient(host, port, bufferSize, onOpenError)
     asyncTcpClient.init()
 
     asyncTcpClient

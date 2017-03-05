@@ -13,21 +13,18 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
 
   "monix - tcp socket client" should "connect to a TCP (HTTP) source successfully" in {
     val p = Promise[Boolean]()
-
-    Task {
-      val tcpObservable = AsyncTcpClient.tcpReader("monix.io", 443, 3.seconds)
+    val t = Task {
+      val tcpObservable = AsyncTcpClient.tcpReader("monix.io", 443)
       tcpObservable.subscribe(
-        { (bytes: Array[Byte]) =>
-          Console.out.println(s"monix: tcp socket client: ${new String(bytes, "UTF-8")}")
-          p.success(true)
-          Continue
-        },
-        err => p.failure(err),
-        () => p.success(true))
-    }.map(c => { c.cancel(); p.success(true)}).runAsync
+        _ => Stop,
+        err => p.failure(err))
+    }.map { c =>
+      c.cancel()
+      p.success(true)
+    }
+    t.runAsync
 
-    val result = Await.result(p.future, 5.seconds)
-    assert(result, true)
+    Await.result(p.future, 5.seconds) shouldBe true
   }
 
   "monix - tcp socket client" should "write to a TCP (HTTP) connection successfully" in {
@@ -41,7 +38,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     }
 
     Task {
-      val tcpConsumer = AsyncTcpClient.tcpWriter("monix.io", 443, 3.seconds)
+      val tcpConsumer = AsyncTcpClient.tcpWriter("monix.io", 443)
       Observable
         .fromIterable(data)
         .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
@@ -55,8 +52,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
 
   "monix - tcp socket client" should "be able to make a HTTP GET request and pipe the response back" in {
     val p = Promise[String]()
-
-    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, 3.seconds)
+    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80)
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { _.subscribe(
@@ -88,8 +84,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
 
   "monix - tcp socket client" should "be able to reuse the same socket and make multiple requests" in {
     val p = Promise[String]()
-
-    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, 3.seconds)
+    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80)
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>
