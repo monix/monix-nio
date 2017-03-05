@@ -15,6 +15,7 @@ import monix.reactive.observers.Subscriber
 
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Promise}
+import scala.util.control.NonFatal
 
 class AsyncTcpClientConsumer private[tcp] (
   host: String,
@@ -76,18 +77,28 @@ class AsyncTcpClientConsumer private[tcp] (
       override def onNext(elem: Array[Byte]): Future[Ack] = {
         val promise = Promise[Ack]()
         connectedSignal.await(timeout.length, timeout.unit)
-        socketClient.foreach(_.writeChannel(ByteBuffer.wrap(elem), new Callback[Int] {
-          override def onError(exc: Throwable) = {
-            closeChannel()
-            sendError(exc)
-            promise.success(Stop) // We have an ERROR we STOP the consumer
-          }
 
-          override def onSuccess(result: Int): Unit = {
-            written += result
-            promise.success(Continue)
+        socketClient.foreach { sc =>
+          try {
+            sc.writeChannel(ByteBuffer.wrap(elem), new Callback[Int] {
+              override def onError(exc: Throwable) = {
+                closeChannel()
+                sendError(exc)
+                promise.success(Stop) // We have an ERROR we STOP the consumer
+              }
+
+              override def onSuccess(result: Int): Unit = {
+                written += result
+                promise.success(Continue)
+              }
+            })
           }
-        }))
+          catch {
+            case NonFatal(ex) =>
+              sendError(ex)
+              promise.success(Stop)
+          }
+        }
 
         promise.future
       }

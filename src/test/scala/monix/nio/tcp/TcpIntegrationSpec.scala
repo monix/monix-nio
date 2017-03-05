@@ -1,7 +1,7 @@
 package monix.nio.tcp
 
 import monix.eval.{Callback, Task}
-import monix.execution.Ack.Continue
+import monix.execution.Ack.{Continue, Stop}
 import monix.reactive.Observable
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -41,7 +41,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     }
 
     Task {
-      val tcpConsumer = AsyncTcpClient.tcpWriter("httpbin.org", 80, 3.seconds)
+      val tcpConsumer = AsyncTcpClient.tcpWriter("monix.io", 443, 3.seconds)
       Observable
         .fromIterable(data)
         .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
@@ -59,25 +59,24 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, 3.seconds)
 
     val recv = new StringBuffer("")
-    asyncTcpClient.tcpObservable.map { reader =>
-      val c = reader.subscribe(
-        { (bytes: Array[Byte]) =>
-          recv.append(new String(bytes, "UTF-8"))
+    asyncTcpClient.tcpObservable.map { _.subscribe(
+      { (bytes: Array[Byte]) =>
+        recv.append(new String(bytes, "UTF-8"))
+        if(recv.toString.contains("monix")) {
+          p.success(recv.toString)
+          Stop // stop as soon as the response is received
+        }
+        else {
           Continue
-        },
-        err => p.failure(err)
-      )
-
-      Thread.sleep(5000) // wait for 5 seconds for data
-
-      c.cancel // close the socket
-      p.success(recv.toString)
+        }
+      },
+      err => p.failure(err))
     }.runAsync
 
     /* trigger a response to be read */
     val request = "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
     asyncTcpClient.tcpConsumer.map { writer =>
-      val data = request.getBytes("UTF-8").grouped(64).toArray
+      val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
       Observable.fromIterable(data).consumeWith(writer).runAsync
     }.runAsync
 
@@ -85,5 +84,49 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     result.length should be > 0
     result.startsWith("HTTP/1.1 200 OK") shouldBe true
     result.contains("monix") shouldBe true
+  }
+
+  "monix - tcp socket client" should "be able to reuse the same socket and make multiple requests" in {
+    val p = Promise[String]()
+
+    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, 3.seconds)
+
+    val recv = new StringBuffer("")
+    asyncTcpClient.tcpObservable.map { reader =>
+      reader.subscribe(
+        { (bytes: Array[Byte]) =>
+          recv.append(new String(bytes, "UTF-8"))
+          if(recv.toString.contains("monix2")) {
+            p.success(recv.toString)
+            Stop // stop as soon as the second response is received
+          }
+          else {
+            Continue
+          }
+        },
+        err => p.failure(err))
+    }.runAsync
+
+
+    /* trigger responses to be read */
+    asyncTcpClient.tcpConsumer
+      .map { writer =>
+        val request = "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
+        val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
+        Observable.fromIterable(data).consumeWith(writer).runAsync
+        writer
+      }
+      /* reuse and make another request*/
+      .map { writer =>
+        val request = "GET /get?tcp=monix2 HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
+        val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
+        Observable.fromIterable(data).consumeWith(writer).runAsync
+      }.runAsync
+
+    val result = Await.result(p.future, 20.seconds)
+    result.length should be > 0
+    result.startsWith("HTTP/1.1 200 OK") shouldBe true
+    result.contains("monix") shouldBe true
+    result.contains("monix2") shouldBe true
   }
 }

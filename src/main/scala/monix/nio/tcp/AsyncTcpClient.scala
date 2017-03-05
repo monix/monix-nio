@@ -29,14 +29,19 @@ class AsyncTcpClient private (
     }
   }
 
+  private[this] lazy val asyncTcpClientObservable =
+    new AsyncTcpClientObservable(underlyingSocketClient, timeout, bufferSize)
+  private[this] lazy val asyncTcpClientConsumer =
+    new AsyncTcpClientConsumer(underlyingSocketClient, timeout)
+
   def tcpObservable: Task[AsyncTcpClientObservable] = Task {
     connectedSignal.await()
-    new AsyncTcpClientObservable(underlyingSocketClient, timeout, bufferSize)
+    asyncTcpClientObservable
   }
 
   def tcpConsumer: Task[AsyncTcpClientConsumer] = Task {
     connectedSignal.await()
-    new AsyncTcpClientConsumer(underlyingSocketClient, timeout)
+    asyncTcpClientConsumer
   }
 
   private def init(): Unit = {
