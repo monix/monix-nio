@@ -60,7 +60,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { _.subscribe(
-      { (bytes: Array[Byte]) =>
+      (bytes: Array[Byte]) => {
         recv.append(new String(bytes, "UTF-8"))
         if(recv.toString.contains("monix")) {
           p.success(recv.toString)
@@ -94,13 +94,17 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>
       reader.subscribe(
-        { (bytes: Array[Byte]) =>
+        (bytes: Array[Byte]) => {
           recv.append(new String(bytes, "UTF-8"))
-          if(recv.toString.contains("monix2")) {
+
+          if (recv.toString.contains("monix2")) {
+            /* stop as soon as the second response is received */
             p.success(recv.toString)
-            Stop // stop as soon as the second response is received
+            Stop
           }
           else {
+            /* reuse and make another request */
+            write("GET /get?tcp=monix2 HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n").runAsync
             Continue
           }
         },
@@ -108,20 +112,13 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     }.runAsync
 
 
-    /* trigger responses to be read */
-    asyncTcpClient.tcpConsumer
-      .map { writer =>
-        val request = "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
-        val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
-        Observable.fromIterable(data).consumeWith(writer).runAsync
-        writer
-      }
-      /* reuse and make another request*/
-      .map { writer =>
-        val request = "GET /get?tcp=monix2 HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
-        val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
-        Observable.fromIterable(data).consumeWith(writer).runAsync
-      }.runAsync
+    def write(request: String) = asyncTcpClient.tcpConsumer.flatMap { writer =>
+      val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
+      Task.fromFuture(Observable.fromIterable(data).consumeWith(writer).runAsync)
+    }
+    // trigger response to be read
+    write("GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n").runAsync
+
 
     val result = Await.result(p.future, 20.seconds)
     result.length should be > 0

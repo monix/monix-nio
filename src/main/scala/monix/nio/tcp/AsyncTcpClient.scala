@@ -34,11 +34,21 @@ class AsyncTcpClient private (
   private[this] lazy val asyncTcpClientConsumer =
     new AsyncTcpClientConsumer(underlyingSocketClient, timeout)
 
+  /**
+    * The TCP client reader.
+    * It is the one responsible to close the connection
+    * when used together with a writer ([[monix.nio.tcp.AsyncTcpClientConsumer]]),
+    * by using a [[monix.reactive.observers.Subscriber]]
+    * and signal [[monix.execution.Ack.Stop]] or cancel it
+    */
   def tcpObservable: Task[AsyncTcpClientObservable] = Task {
     connectedSignal.await()
     asyncTcpClientObservable
   }
 
+  /**
+    * The TCP client writer
+    */
   def tcpConsumer: Task[AsyncTcpClientConsumer] = Task {
     connectedSignal.await()
     asyncTcpClientConsumer
