@@ -2,6 +2,7 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import monix.eval.Callback
 import monix.execution.Ack.{Continue, Stop}
@@ -14,28 +15,36 @@ import monix.reactive.observers.Subscriber
 
 import scala.concurrent.{Future, Promise}
 
-class AsyncTcpClientConsumer(host: String, port: Int) extends Consumer[Array[Byte], Long] {
+class AsyncTcpClientConsumer(host: String, port: Int, timeoutInSeconds: Int = 60) extends Consumer[Array[Byte], Long] {
 
   override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
     class AsyncTcpSubscriber extends Subscriber[Array[Byte]] { self =>
       implicit val scheduler = s
 
-      private[this] val client: Client = {
-        val socket = Client(new InetSocketAddress(host, port), onOpenError = self.onError)
-        val connectCallback = new Callback[Void]() {
-          override def onSuccess(value: Void): Unit = {}
-          override def onError(ex: Throwable): Unit = {
-            closeChannel()
-            self.onError(ex)
-          }
-        }
-
-        socket.connect(connectCallback)
-        socket
-      }
       private[this] val callbackCalled = Atomic(false)
       private[this] var written = 0L
 
+      private[this] val client = Client(new InetSocketAddress(host, port), onOpenError = self.onError)
+      private[this] val connectedSignal = new CountDownLatch(1)
+      private[this] val connectCallback = new Callback[Void]() {
+        override def onSuccess(value: Void): Unit = {
+          connectedSignal.countDown()
+        }
+        override def onError(ex: Throwable): Unit = {
+          connectedSignal.countDown()
+          closeChannel()
+          self.onError(ex)
+        }
+      }
+
+      def init() = {
+        client.connect(connectCallback)
+      }
+
+      def onCancel() = {
+        callbackCalled.set(true) // the callback should not be called after cancel
+        closeChannel()
+      }
 
       override def onComplete(): Unit = {
         closeChannel()
@@ -50,6 +59,7 @@ class AsyncTcpClientConsumer(host: String, port: Int) extends Consumer[Array[Byt
 
       override def onNext(elem: Array[Byte]): Future[Ack] = {
         val promise = Promise[Ack]()
+        connectedSignal.await(timeoutInSeconds, TimeUnit.SECONDS)
         client.writeChannel(ByteBuffer.wrap(elem), new Callback[Int] {
           override def onError(exc: Throwable) = {
             closeChannel()
@@ -73,14 +83,10 @@ class AsyncTcpClientConsumer(host: String, port: Int) extends Consumer[Array[Byt
       private def closeChannel()(implicit reporter: UncaughtExceptionReporter) = {
         client.closeChannel()(reporter)
       }
-
-      def onCancel() = {
-        callbackCalled.set(true) // the callback should not be called after cancel
-        closeChannel()
-      }
     }
 
     val out = new AsyncTcpSubscriber()
+    out.init()
 
     val cancelable = SingleFunctionCallCancelable(out.onCancel)
     val conn = SingleAssignmentCancelable.plusOne(cancelable)

@@ -1,6 +1,7 @@
 package monix.nio.tcp
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import monix.eval.{Callback, Task}
 import monix.execution.Ack.{Continue, Stop}
@@ -15,12 +16,16 @@ import monix.reactive.observers.Subscriber
 
 import scala.util.control.NonFatal
 
-class AsyncTcpClientObservable(host: String, port: Int, buffSize: Int = 256 * 1024) extends Observable[Array[Byte]] {
+class AsyncTcpClientObservable(
+  host: String, port: Int,
+  buffSize: Int = 256 * 1024,
+  timeoutInSeconds: Int = 60) extends Observable[Array[Byte]] {
 
   private[this] val client = Client(
     new InetSocketAddress(host, port),
     onOpenError = t => Console.err.println(t.getMessage))
   private[this] val buffer = ByteBuffer.allocate(buffSize)
+  private[this] val connectedSignal = new CountDownLatch(1)
   private[this] val wasSubscribed = Atomic(false)
 
   override def unsafeSubscribeFn(subscriber: Subscriber[Array[Byte]]): Cancelable = {
@@ -31,8 +36,11 @@ class AsyncTcpClientObservable(host: String, port: Int, buffSize: Int = 256 * 10
     }
     else try {
       val connectCallback = new Callback[Void]() {
-        override def onSuccess(value: Void): Unit = {}
+        override def onSuccess(value: Void): Unit = {
+          connectedSignal.countDown()
+        }
         override def onError(ex: Throwable): Unit = {
+          connectedSignal.countDown()
           closeChannel()
           subscriber.onError(ex)
         }
@@ -60,6 +68,8 @@ class AsyncTcpClientObservable(host: String, port: Int, buffSize: Int = 256 * 10
         subscriber.onError(ex)
       }
     }
+
+    connectedSignal.await(timeoutInSeconds, TimeUnit.SECONDS)
 
     val c = Task
       .defer(loop(subscriber))
@@ -92,7 +102,7 @@ class AsyncTcpClientObservable(host: String, port: Int, buffSize: Int = 256 * 10
         case NonEmptyBytes(arr) =>
           Task.fromFuture(subscriber.onNext(arr)).flatMap {
             case Continue => loop(subscriber)
-            case Stop => println("stop"); Task.now(Array.empty)
+            case Stop => Task.now(Array.empty)
           }
       }
     }
