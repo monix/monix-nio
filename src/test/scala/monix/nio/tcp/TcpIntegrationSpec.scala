@@ -37,14 +37,12 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }
 
-    Task {
-      val tcpConsumer = AsyncTcpClient.tcpWriter("monix.io", 443)
-      Observable
-        .fromIterable(data)
-        .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
-        .consumeWith(tcpConsumer)
-        .runAsync(callback)
-    }.runAsync
+    val tcpConsumer = AsyncTcpClient.tcpWriter("monix.io", 443)
+    Observable
+      .fromIterable(data)
+      .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
+      .consumeWith(tcpConsumer)
+      .runAsync(callback)
 
     val result = Await.result(p.future, 5.seconds)
     assert(result, true)
@@ -71,9 +69,9 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
 
     /* trigger a response to be read */
     val request = "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
-    asyncTcpClient.tcpConsumer.map { writer =>
+    asyncTcpClient.tcpConsumer.flatMap { writer =>
       val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
-      Observable.fromIterable(data).consumeWith(writer).runAsync
+      Observable.fromIterable(data).consumeWith(writer)
     }.runAsync
 
     val result = Await.result(p.future, 10.seconds)
