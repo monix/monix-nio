@@ -10,16 +10,17 @@ import monix.eval.Callback
 import monix.execution.UncaughtExceptionReporter
 import scala.util.control.NonFatal
 
-private case class Client(
+private case class SocketClient(
   to: InetSocketAddress,
   reuseAddress: Boolean = true,
   sendBufferSize: Int = 256 * 1024,
   receiveBufferSize: Int = 256 * 1024,
   keepAlive: Boolean = false,
   noDelay: Boolean = false,
-  onOpenError: Throwable => Unit = _ => ()) {
+  onOpenError: Throwable => Unit = _ => (),
+  closeOnComplete: Boolean = true) {
 
-  private lazy val socketChannel: Either[Throwable, AsynchronousSocketChannel] = try {
+  private[this] lazy val socketChannel: Either[Throwable, AsynchronousSocketChannel] = try {
     val ag = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool())
     val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(ag)
     ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
@@ -58,7 +59,7 @@ private case class Client(
     }
 
     socketChannel.fold(_ => (), { c =>
-      if(c.isOpen) c.read(dst, 0l, TimeUnit.MILLISECONDS, null, handler)
+      c.read(dst, 0l, TimeUnit.MILLISECONDS, null, handler)
     })
   }
 
@@ -74,7 +75,7 @@ private case class Client(
     }
 
     socketChannel.fold(_ => (), { c =>
-      if(c.isOpen) c.write(src, 0l, TimeUnit.MILLISECONDS, null, handler)
+      c.write(src, 0l, TimeUnit.MILLISECONDS, null, handler)
     })
   }
 }
