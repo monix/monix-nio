@@ -43,7 +43,7 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
         }
       }
 
-      def init() = {
+      def init() = try {
         if (socketClient.isDefined) {
           connectedSignal.success(())
         }
@@ -51,6 +51,9 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
           socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = self.onError))
           socketClient.foreach(_.connect(connectCallback))
         }
+      }
+      catch {
+        case NonFatal(ex) => sendError(ex)
       }
 
       def onCancel(): Unit = {
