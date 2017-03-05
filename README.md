@@ -112,7 +112,7 @@ asyncTcpClient
 The current maintainers (people who can help you) are:
 - Sorin Chiprian ([@creyer](https://github.com/creyer))
 - Alexandru Nedelcu ([@alexandru](https://github.com/alexandru))
-- Radu Gance ([@radusw](https://github.com/radusw))
+- Radu Gancea ([@radusw](https://github.com/radusw))
 
 
 
