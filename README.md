@@ -13,6 +13,7 @@ We can talk under the Monix Gitter:
 Monix-nio can be used to have the power of Monix combined with underlying Java-nio libraries
 For the moment the following support has been added:
 - Read/Write async to a file (combined with utf8 encoding/decoding if necessary)
+- Read/Write async to TCP
 
 ## Usage
 ### Read from a text file
