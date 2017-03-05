@@ -31,13 +31,14 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
       private[this] val callbackCalled = Atomic(false)
       private[this] var written = 0L
 
-      private[this] val connectedSignal = Promise[Unit]()
+      private[this] val connectedPromise = Promise[Unit]()
+      private[this] val connectedSignal = connectedPromise.future
       private[this] val connectCallback = new Callback[Void]() {
         override def onSuccess(value: Void): Unit = {
-          connectedSignal.success(())
+          connectedPromise.success(())
         }
         override def onError(ex: Throwable): Unit = {
-          connectedSignal.failure(ex)
+          connectedPromise.failure(ex)
           closeChannel()
           self.onError(ex)
         }
@@ -45,7 +46,7 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
 
       def init() = try {
         if (socketClient.isDefined) {
-          connectedSignal.success(())
+          connectedPromise.success(())
         }
         else {
           socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = self.onError))
@@ -72,31 +73,40 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
         sendError(ex)
       }
 
-      override def onNext(elem: Array[Byte]): Future[Ack] = connectedSignal.future.flatMap { _ =>
-        val promise = Promise[Ack]()
-        socketClient.foreach { sc =>
-          try {
-            sc.writeChannel(ByteBuffer.wrap(elem), new Callback[Int] {
-              override def onError(exc: Throwable) = {
-                closeChannel()
-                sendError(exc)
-                promise.success(Stop) // We have an ERROR we STOP the consumer
-              }
+      override def onNext(elem: Array[Byte]): Future[Ack] = {
+        def write(): Future[Ack] = {
+          val promise = Promise[Ack]()
+          socketClient.foreach { sc =>
+            try {
+              sc.writeChannel(ByteBuffer.wrap(elem), new Callback[Int] {
+                override def onError(exc: Throwable) = {
+                  closeChannel()
+                  sendError(exc)
+                  promise.success(Stop) // We have an ERROR we STOP the consumer
+                }
 
-              override def onSuccess(result: Int): Unit = {
-                written += result
-                promise.success(Continue)
-              }
-            })
+                override def onSuccess(result: Int): Unit = {
+                  written += result
+                  promise.success(Continue)
+                }
+              })
+            }
+            catch {
+              case NonFatal(ex) =>
+                sendError(ex)
+                promise.success(Stop)
+            }
           }
-          catch {
-            case NonFatal(ex) =>
-              sendError(ex)
-              promise.success(Stop)
-          }
+
+          promise.future
         }
 
-        promise.future
+        if (connectedSignal.value.isEmpty) {
+          connectedSignal.flatMap(_ => write())
+        }
+        else {
+          write()
+        }
       }
 
       private def sendError(t: Throwable) =

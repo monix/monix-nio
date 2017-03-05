@@ -98,21 +98,27 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
             Stop
           }
           else {
-            /* reuse and make another request */
-            write("GET /get?tcp=monix2 HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n").runAsync
             Continue
           }
         },
         err => p.failure(err))
     }.runAsync
 
+    // test with small chunks (2 bytes) to test order
+    def data(request: String) = request.getBytes("UTF-8").grouped(2).toArray
 
-    def write(request: String) = asyncTcpClient.tcpConsumer.flatMap { writer =>
-      val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
-      Task.fromFuture(Observable.fromIterable(data).consumeWith(writer).runAsync)
+    val writeT = for {
+      writer <- asyncTcpClient.tcpConsumer
+      r1 = data("GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n")
+      _ <- Observable.fromIterable(r1).consumeWith(writer)
+      r2 = data("GET /get?tcp=monix2 HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n")
+      _ <- Observable.fromIterable(r2).consumeWith(writer)
+    } yield {
+      ()
     }
+
     // trigger response to be read
-    write("GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n").runAsync
+    writeT.runAsync
 
 
     val result = Await.result(p.future, 20.seconds)
