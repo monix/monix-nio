@@ -50,7 +50,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
 
   "monix - tcp socket client" should "be able to make a HTTP GET request and pipe the response back" in {
     val p = Promise[String]()
-    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80)
+    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { _.subscribe(
@@ -82,7 +82,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
 
   "monix - tcp socket client" should "be able to reuse the same socket and make multiple requests" in {
     val p = Promise[String]()
-    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80)
+    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>

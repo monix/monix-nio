@@ -2,10 +2,12 @@ package monix.nio.tcp
 
 import monix.eval.{Callback, Task}
 
+import scala.util.control.NonFatal
+
 class AsyncTcpClient private (
   host: String, port: Int,
-  bufferSize: Int,
-  onOpenError: Throwable => Unit)(implicit ec: scala.concurrent.ExecutionContext) {
+  onOpenError: Throwable => Unit,
+  bufferSize: Int)(implicit ec: scala.concurrent.ExecutionContext) {
 
   private[this] val underlyingSocketClient = SocketClient(
     new java.net.InetSocketAddress(host, port),
@@ -45,9 +47,13 @@ class AsyncTcpClient private (
     connectedSignal.future.map(_ => asyncTcpClientConsumer)
   }
 
-  private def init(): Unit = {
-    underlyingSocketClient.connect(connectCallback)
-  }
+  private def init(): Unit =
+    try {
+      underlyingSocketClient.connect(connectCallback)
+    }
+    catch {
+      case NonFatal(ex) => onOpenError(ex)
+    }
 }
 
 object AsyncTcpClient {
@@ -60,10 +66,10 @@ object AsyncTcpClient {
 
   def apply(
     host: String, port: Int,
-    bufferSize: Int = 256 * 1024,
-    onOpenError: Throwable => Unit = _ => ())(implicit ec: scala.concurrent.ExecutionContext): AsyncTcpClient = {
+    onOpenError: Throwable => Unit,
+    bufferSize: Int = 256 * 1024)(implicit ec: scala.concurrent.ExecutionContext): AsyncTcpClient = {
 
-    val asyncTcpClient = new AsyncTcpClient(host, port, bufferSize, onOpenError)
+    val asyncTcpClient = new AsyncTcpClient(host, port, onOpenError, bufferSize)
     asyncTcpClient.init()
 
     asyncTcpClient
