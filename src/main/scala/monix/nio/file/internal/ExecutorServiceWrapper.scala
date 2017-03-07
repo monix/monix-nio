@@ -18,20 +18,21 @@
 package monix.nio.file.internal
 
 import java.util
-import java.util.concurrent.{AbstractExecutorService, ExecutorService, TimeUnit}
-import monix.execution.schedulers.{ReferenceScheduler, SchedulerService}
-import monix.execution.{Cancelable, ExecutionModel, Scheduler}
+import java.util.concurrent.{ AbstractExecutorService, ExecutorService, TimeUnit }
+import monix.execution.schedulers.{ ReferenceScheduler, SchedulerService }
+import monix.execution.{ Cancelable, ExecutionModel, Scheduler }
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContextExecutorService}
+import scala.concurrent.{ Await, ExecutionContextExecutorService }
 
-/** Wraps a Monix `Scheduler` into a Java `ExecutorService`.
-  *
-  * Can work with Monix's `SchedulerService` in order to provide
-  * `shutdown` operations, however this is optional.
-  */
+/**
+ * Wraps a Monix `Scheduler` into a Java `ExecutorService`.
+ *
+ * Can work with Monix's `SchedulerService` in order to provide
+ * `shutdown` operations, however this is optional.
+ */
 private[file] final class ExecutorServiceWrapper(scheduler: Scheduler)
-  extends AbstractExecutorService with ExecutionContextExecutorService {
+    extends AbstractExecutorService with ExecutionContextExecutorService {
 
   override def execute(runnable: Runnable): Unit =
     scheduler.execute(runnable)
@@ -77,10 +78,11 @@ private[file] object ExecutorServiceWrapper {
   def apply(s: Scheduler): ExecutorService =
     new ExecutorServiceWrapper(s)
 
-  /** `Scheduler` instance that executes `Runnables` immediately,
-    * used when blocking in [[ExecutorServiceWrapper.awaitTermination]],
-    * in order to avoid initializing an actual `Scheduler`.
-    */
+  /**
+   * `Scheduler` instance that executes `Runnables` immediately,
+   * used when blocking in [[ExecutorServiceWrapper.awaitTermination]],
+   * in order to avoid initializing an actual `Scheduler`.
+   */
   private val currentThread: Scheduler =
     new ReferenceScheduler {
       import monix.execution.Scheduler.global
