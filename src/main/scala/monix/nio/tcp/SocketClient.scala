@@ -7,10 +7,11 @@ import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel, C
 import java.util.concurrent.{Executors, TimeUnit}
 
 import monix.eval.Callback
-import monix.execution.UncaughtExceptionReporter
+import monix.nio.AsyncMonixChannel
+
 import scala.util.control.NonFatal
 
-private case class SocketClient(
+protected[tcp] case class SocketClient(
   to: InetSocketAddress,
   reuseAddress: Boolean = true,
   sendBufferSize: Int = 256 * 1024,
@@ -18,9 +19,9 @@ private case class SocketClient(
   keepAlive: Boolean = false,
   noDelay: Boolean = false,
   onOpenError: Throwable => Unit = _ => (),
-  closeOnComplete: Boolean = true) {
+  closeOnComplete: Boolean = true) extends AsyncMonixChannel {
 
-  private[this] lazy val socketChannel: Either[Throwable, AsynchronousSocketChannel] = try {
+  private[this] lazy val asyncSocketChannel: Either[Throwable, AsynchronousSocketChannel] = try {
     val ag = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool())
     val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(ag)
     ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
@@ -33,13 +34,13 @@ private case class SocketClient(
     case NonFatal(exc) => onOpenError(exc); Left(exc)
   }
 
-  protected[tcp] def closeChannel()(implicit reporter: UncaughtExceptionReporter): Unit = {
-    socketChannel.fold(_ => (), c => try c.close() catch {
-      case NonFatal(ex) => reporter.reportFailure(ex)
-    })
+  override def size(): Long = 0
+
+  override def close(): Unit = {
+    asyncSocketChannel.fold(_ => (), c => c.close())
   }
 
-  protected[tcp] def connect(callback: Callback[Void]): Unit = {
+  def connect(callback: Callback[Void]): Unit = {
     val handler = new CompletionHandler[Void, Null] {
       override def completed(result: Void, attachment: Null) = {
         callback.onSuccess(result)
@@ -49,10 +50,10 @@ private case class SocketClient(
         case _ => callback.onError(exc)
       }
     }
-    socketChannel.fold(_ => (), c => c.connect(to, null, handler))
+    asyncSocketChannel.fold(_ => (), c => c.connect(to, null, handler))
   }
 
-  protected[tcp] def readChannel(dst: ByteBuffer, callback: Callback[Int]): Unit = {
+  override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit = {
     val handler = new CompletionHandler[Integer, Null] {
       override def completed(result: Integer, attachment: Null) = {
         callback.onSuccess(result)
@@ -63,12 +64,12 @@ private case class SocketClient(
       }
     }
 
-    socketChannel.fold(_ => (), { c =>
+    asyncSocketChannel.fold(_ => (), { c =>
       c.read(dst, 0l, TimeUnit.MILLISECONDS, null, handler)
     })
   }
 
-  protected[tcp] def writeChannel(src: ByteBuffer, callback: Callback[Int]): Unit = {
+  override def write(src: ByteBuffer, position: Long, callback: Callback[Int]): Unit = {
     val handler = new CompletionHandler[Integer, Null] {
       override def completed(result: Integer, attachment: Null) = {
         callback.onSuccess(result)
@@ -79,7 +80,7 @@ private case class SocketClient(
       }
     }
 
-    socketChannel.fold(_ => (), { c =>
+    asyncSocketChannel.fold(_ => (), { c =>
       c.write(src, 0l, TimeUnit.MILLISECONDS, null, handler)
     })
   }

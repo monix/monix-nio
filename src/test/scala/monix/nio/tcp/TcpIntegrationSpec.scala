@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 class TcpIntegrationSpec extends FlatSpec with Matchers {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
 
-  "monix - tcp socket client" should "connect to a TCP (HTTP) source successfully" in {
+  "Monix - TCP socket client" should "connect to a TCP (HTTP) source successfully" in {
     val p = Promise[Boolean]()
     val t = Task {
       val tcpObservable = AsyncTcpClient.tcpReader("monix.io", 443)
@@ -27,7 +27,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     Await.result(p.future, 5.seconds) shouldBe true
   }
 
-  "monix - tcp socket client" should "write to a TCP (HTTP) connection successfully" in {
+  it should "write to a TCP (HTTP) connection successfully" in {
     val data = Array.fill(8)("monix".getBytes())
     val chunkSize = 2 // very small chunks for testing
 
@@ -48,7 +48,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     assert(result, true)
   }
 
-  "monix - tcp socket client" should "be able to make a HTTP GET request and pipe the response back" in {
+  it should "be able to make a HTTP GET request and pipe the response back" in {
     val p = Promise[String]()
     val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
 
@@ -80,7 +80,7 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     result.contains("monix") shouldBe true
   }
 
-  "monix - tcp socket client" should "be able to reuse the same socket and make multiple requests" in {
+  it should "be able to reuse the same socket and make multiple requests" in {
     val p = Promise[String]()
     val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
 

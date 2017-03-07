@@ -78,7 +78,7 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
           val promise = Promise[Ack]()
           socketClient.foreach { sc =>
             try {
-              sc.writeChannel(ByteBuffer.wrap(elem), new Callback[Int] {
+              sc.write(ByteBuffer.wrap(elem), 0, new Callback[Int] {
                 override def onError(exc: Throwable) = {
                   closeChannel()
                   sendError(exc)
@@ -114,7 +114,7 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
           s.execute(new Runnable {def run() = cb.onError(t)})
 
       private def closeChannel()(implicit reporter: UncaughtExceptionReporter) = {
-        socketClient.foreach(_.closeChannel())
+        socketClient.foreach(_.close())
       }
     }
 

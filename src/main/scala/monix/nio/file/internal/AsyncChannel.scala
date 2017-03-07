@@ -14,23 +14,6 @@ import monix.nio.AsyncMonixChannel
 import collection.JavaConverters._
 import scala.util.control.NonFatal
 
-sealed trait AsyncChannel{
-  def channel: AsyncMonixChannel
-  private val channelOpen = Atomic(true)
-
-  // close channel errors are not exposed as the operation is performed
-  // under the hood, sometimes async, after the communication with
-  // the app has been already closed
-  protected def closeChannel()(implicit reporter: UncaughtExceptionReporter) =
-    try {
-      val open = channelOpen.getAndSet(false)
-      if (open) channel.close()
-    }
-    catch {
-      case NonFatal(ex) => reporter.reportFailure(ex)
-    }
-}
-
 private[internal] case object NotInitializedMonixFileChannel extends AsyncMonixChannel {
   def size(): Long = 0
   def close() = ()
@@ -101,13 +84,22 @@ private[internal] case class AsyncMonixFileChannelWrapper(asyncFileChannel: Asyn
   }
 }
 
-private[nio] abstract class AsyncReadChannel(val channel: AsyncMonixChannel) extends AsyncChannel {
-  protected def read(dst: ByteBuffer, position: Long, callback: Callback[Int]) =
-    channel.read(dst, position, callback)
-}
 
+private[nio] abstract class AsyncWriterChannel(val channel: AsyncMonixChannel) {
+  private val channelOpen = Atomic(true)
 
-private[nio] abstract class AsyncWriterChannel(val channel: AsyncMonixChannel) extends AsyncChannel {
+  // close channel errors are not exposed as the operation is performed
+  // under the hood, sometimes async, after the communication with
+  // the app has been already closed
+  protected def closeChannel()(implicit reporter: UncaughtExceptionReporter) =
+  try {
+    val open = channelOpen.getAndSet(false)
+    if (open) channel.close()
+  }
+  catch {
+    case NonFatal(ex) => reporter.reportFailure(ex)
+  }
+
   protected def write(b: ByteBuffer, position: Long, callback: Callback[Int]) =
     channel.write(b, position,  callback)
 }
