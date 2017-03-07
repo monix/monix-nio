@@ -17,11 +17,11 @@
 
 package monix.nio.tcp
 
-import java.net.{InetSocketAddress, StandardSocketOptions}
+import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.spi.AsynchronousChannelProvider
-import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel, CompletionHandler}
-import java.util.concurrent.{Executors, TimeUnit}
+import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousSocketChannel, CompletionHandler }
+import java.util.concurrent.{ Executors, TimeUnit }
 
 import monix.eval.Callback
 import monix.nio.AsyncMonixChannel
@@ -29,14 +29,15 @@ import monix.nio.AsyncMonixChannel
 import scala.util.control.NonFatal
 
 protected[tcp] case class SocketClient(
-  to: InetSocketAddress,
-  reuseAddress: Boolean = true,
-  sendBufferSize: Int = 256 * 1024,
-  receiveBufferSize: Int = 256 * 1024,
-  keepAlive: Boolean = false,
-  noDelay: Boolean = false,
-  onOpenError: Throwable => Unit = _ => (),
-  closeWhenDone: Boolean = true) extends AsyncMonixChannel {
+    to: InetSocketAddress,
+    reuseAddress: Boolean = true,
+    sendBufferSize: Int = 256 * 1024,
+    receiveBufferSize: Int = 256 * 1024,
+    keepAlive: Boolean = false,
+    noDelay: Boolean = false,
+    onOpenError: Throwable => Unit = _ => (),
+    closeWhenDone: Boolean = true
+) extends AsyncMonixChannel {
 
   private[this] lazy val asyncSocketChannel: Either[Throwable, AsynchronousSocketChannel] = try {
     val ag = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool())

@@ -17,19 +17,21 @@
 
 package monix.nio.tcp
 
-import monix.eval.{Callback, Task}
+import monix.eval.{ Callback, Task }
 
 import scala.util.control.NonFatal
 
 class AsyncTcpClient private (
-  host: String, port: Int,
-  onOpenError: Throwable => Unit,
-  bufferSize: Int)(implicit ec: scala.concurrent.ExecutionContext) {
+    host: String, port: Int,
+    onOpenError: Throwable => Unit,
+    bufferSize: Int
+)(implicit ec: scala.concurrent.ExecutionContext) {
 
   private[this] val underlyingSocketClient = SocketClient(
     new java.net.InetSocketAddress(host, port),
     onOpenError = onOpenError,
-    closeWhenDone = false)
+    closeWhenDone = false
+  )
   private[this] val connectedSignal = scala.concurrent.Promise[Unit]()
   private[this] val connectCallback = new Callback[Void]() {
     override def onSuccess(value: Void): Unit = {
@@ -47,19 +49,19 @@ class AsyncTcpClient private (
     new AsyncTcpClientConsumer(underlyingSocketClient)
 
   /**
-    * The TCP client reader.
-    * It is the one responsible to close the connection
-    * when used together with a writer ([[monix.nio.tcp.AsyncTcpClientConsumer]]),
-    * by using a [[monix.reactive.observers.Subscriber]]
-    * and signal [[monix.execution.Ack.Stop]] or cancel it
-    */
+   * The TCP client reader.
+   * It is the one responsible to close the connection
+   * when used together with a writer ([[monix.nio.tcp.AsyncTcpClientConsumer]]),
+   * by using a [[monix.reactive.observers.Subscriber]]
+   * and signal [[monix.execution.Ack.Stop]] or cancel it
+   */
   def tcpObservable: Task[AsyncTcpClientObservable] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientObservable)
   }
 
   /**
-    * The TCP client writer
-    */
+   * The TCP client writer
+   */
   def tcpConsumer: Task[AsyncTcpClientConsumer] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientConsumer)
   }
@@ -67,8 +69,7 @@ class AsyncTcpClient private (
   private def init(): Unit =
     try {
       underlyingSocketClient.connect(connectCallback)
-    }
-    catch {
+    } catch {
       case NonFatal(ex) => onOpenError(ex)
     }
 }
@@ -84,7 +85,8 @@ object AsyncTcpClient {
   def apply(
     host: String, port: Int,
     onOpenError: Throwable => Unit,
-    bufferSize: Int = 256 * 1024)(implicit ec: scala.concurrent.ExecutionContext): AsyncTcpClient = {
+    bufferSize: Int = 256 * 1024
+  )(implicit ec: scala.concurrent.ExecutionContext): AsyncTcpClient = {
 
     val asyncTcpClient = new AsyncTcpClient(host, port, onOpenError, bufferSize)
     asyncTcpClient.init()

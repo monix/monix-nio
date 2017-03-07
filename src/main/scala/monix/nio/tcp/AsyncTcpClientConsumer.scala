@@ -35,7 +35,6 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Asyn
 
   override protected def channel = socketClient
 
-
   override def init(subscriber: AsyncChannelSubscriber) = {
     import subscriber.scheduler
 
@@ -57,8 +56,7 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Asyn
         socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = subscriber.onError))
         socketClient.foreach(_.connect(connectCallback))
       }
-    }
-    catch {
+    } catch {
       case NonFatal(ex) => subscriber.sendError(ex)
     }
     connectedPromise.future

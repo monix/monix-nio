@@ -26,8 +26,9 @@ import monix.reactive.observers.Subscriber
 import scala.concurrent.Promise
 
 final class AsyncTcpClientObservable private[tcp] (
-  host: String, port: Int,
-  buffSize: Int = 256 * 1024) extends AsyncChannelObservable[SocketClient] {
+    host: String, port: Int,
+    buffSize: Int = 256 * 1024
+) extends AsyncChannelObservable[SocketClient] {
 
   override def bufferSize = buffSize
 
@@ -45,8 +46,7 @@ final class AsyncTcpClientObservable private[tcp] (
     import subscriber.scheduler
     if (socketClient.isDefined) {
       connectedSignal.success(())
-    }
-    else {
+    } else {
       socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = subscriber.onError))
       val connectCallback = new Callback[Void]() {
         override def onSuccess(value: Void): Unit = {

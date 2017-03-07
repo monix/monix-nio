@@ -19,9 +19,9 @@ package monix.nio
 
 import java.nio.ByteBuffer
 
-import monix.eval.{Callback, Task}
-import monix.execution.Ack.{Continue, Stop}
-import monix.execution.{Cancelable, UncaughtExceptionReporter}
+import monix.eval.{ Callback, Task }
+import monix.execution.Ack.{ Continue, Stop }
+import monix.execution.{ Cancelable, UncaughtExceptionReporter }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignmentCancelable
 import monix.execution.exceptions.APIContractViolationException
@@ -41,15 +41,13 @@ abstract protected[nio] class AsyncChannelObservable[T <: AsyncMonixChannel] ext
   protected def init(subscriber: Subscriber[Array[Byte]]): Future[Unit] =
     Future.successful(())
 
-
   private[this] val wasSubscribed = Atomic(false)
   override def unsafeSubscribeFn(subscriber: Subscriber[Array[Byte]]): Cancelable = {
     import subscriber.scheduler
     if (wasSubscribed.getAndSet(true)) {
       subscriber.onError(APIContractViolationException(this.getClass.getName))
       Cancelable.empty
-    }
-    else try startReading(subscriber) catch {
+    } else try startReading(subscriber) catch {
       case NonFatal(e) =>
         subscriber.onError(e)
         closeChannel()
@@ -97,7 +95,8 @@ abstract protected[nio] class AsyncChannelObservable[T <: AsyncMonixChannel] ext
   private[this] val buffer = ByteBuffer.allocate(bufferSize)
   private def loop(
     subscriber: Subscriber[Array[Byte]],
-    position: Long)(implicit rep: UncaughtExceptionReporter): Task[Array[Byte]] = {
+    position: Long
+  )(implicit rep: UncaughtExceptionReporter): Task[Array[Byte]] = {
 
     buffer.clear()
     createReadTask(buffer, position).flatMap { result =>
@@ -119,14 +118,12 @@ abstract protected[nio] class AsyncChannelObservable[T <: AsyncMonixChannel] ext
     }
   }
 
-
   private[this] val channelOpen = Atomic(true)
   protected def closeChannel()(implicit reporter: UncaughtExceptionReporter) =
     try {
       val open = channelOpen.getAndSet(false)
       if (open) channel.foreach(_.close())
-    }
-    catch {
+    } catch {
       case NonFatal(ex) => reporter.reportFailure(ex)
     }
 }

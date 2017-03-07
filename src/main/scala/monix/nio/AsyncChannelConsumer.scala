@@ -20,15 +20,15 @@ package monix.nio
 import java.nio.ByteBuffer
 
 import monix.eval.Callback
-import monix.execution.Ack.{Continue, Stop}
-import monix.execution.{Ack, Scheduler, UncaughtExceptionReporter}
+import monix.execution.Ack.{ Continue, Stop }
+import monix.execution.{ Ack, Scheduler, UncaughtExceptionReporter }
 import monix.execution.atomic.Atomic
-import monix.execution.cancelables.{AssignableCancelable, SingleAssignmentCancelable}
+import monix.execution.cancelables.{ AssignableCancelable, SingleAssignmentCancelable }
 import monix.nio.cancelables.SingleFunctionCallCancelable
 import monix.reactive.Consumer
 import monix.reactive.observers.Subscriber
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Array[Byte], Long] {
@@ -37,7 +37,7 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
   def init(subscriber: AsyncChannelSubscriber): Future[Unit] = Future.successful(())
 
   class AsyncChannelSubscriber(consumerCallback: Callback[Long])(implicit val scheduler: Scheduler)
-    extends Subscriber[Array[Byte]] { self =>
+      extends Subscriber[Array[Byte]] { self =>
 
     private[this] lazy val initFuture = init(self)
     private[this] val callbackCalled = Atomic(false)
@@ -60,8 +60,7 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
                 promise.success(Continue)
               }
             })
-          }
-          catch {
+          } catch {
             case NonFatal(ex) =>
               sendError(ex)
               promise.success(Stop)
@@ -73,14 +72,13 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
 
       if (initFuture.value.isEmpty) {
         initFuture.flatMap(_ => write())
-      }
-      else {
+      } else {
         write()
       }
     }
 
     override def onComplete(): Unit = {
-      channel.collect { case sc if sc.closeOnComplete => closeChannel()}
+      channel.collect { case sc if sc.closeOnComplete => closeChannel() }
       if (callbackCalled.compareAndSet(expect = false, update = true))
         consumerCallback.onSuccess(position)
     }
@@ -90,23 +88,20 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
       sendError(ex)
     }
 
-
     protected[nio] def onCancel(): Unit = {
       callbackCalled.set(true) // the callback should not be called after cancel
-      channel.collect { case sc if sc.closeOnComplete => closeChannel()}
+      channel.collect { case sc if sc.closeOnComplete => closeChannel() }
     }
 
     protected[nio] def sendError(t: Throwable) = if (callbackCalled.compareAndSet(expect = false, update = true))
-      scheduler.execute(new Runnable { def run() = consumerCallback.onError(t)})
-
+      scheduler.execute(new Runnable { def run() = consumerCallback.onError(t) })
 
     private[this] val channelOpen = Atomic(true)
     protected[nio] def closeChannel()(implicit reporter: UncaughtExceptionReporter) = {
       try {
         val open = channelOpen.getAndSet(false)
         if (open) channel.foreach(_.close())
-      }
-      catch {
+      } catch {
         case NonFatal(ex) => reporter.reportFailure(ex)
       }
     }

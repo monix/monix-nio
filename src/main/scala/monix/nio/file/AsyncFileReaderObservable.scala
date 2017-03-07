@@ -17,11 +17,12 @@
 
 package monix.nio.file
 
-import monix.nio.{AsyncChannelObservable, AsyncMonixChannel}
+import monix.nio.{ AsyncChannelObservable, AsyncMonixChannel }
 
 final class AsyncFileReaderObservable(
-  fileChannel: AsyncMonixChannel,
-  size: Int) extends AsyncChannelObservable[AsyncMonixChannel] {
+    fileChannel: AsyncMonixChannel,
+    size: Int
+) extends AsyncChannelObservable[AsyncMonixChannel] {
 
   override def bufferSize = size
   override def channel = Some(fileChannel)

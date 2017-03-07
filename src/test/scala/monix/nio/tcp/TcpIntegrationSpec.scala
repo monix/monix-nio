@@ -1,33 +1,34 @@
 package monix.nio.tcp
 
-import monix.eval.{Callback, Task}
-import monix.execution.Ack.{Continue, Stop}
+import minitest.SimpleTestSuite
+import monix.eval.{ Callback, Task }
+import monix.execution.Ack.{ Continue, Stop }
 import monix.reactive.Observable
-import org.scalatest.{FlatSpec, Matchers}
 
-import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
 
-class TcpIntegrationSpec extends FlatSpec with Matchers {
+object TcpIntegrationSpec extends SimpleTestSuite {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
 
-  "Monix - TCP socket client" should "connect to a TCP (HTTP) source successfully" in {
+  test("connect to a TCP (HTTP) source successfully") {
     val p = Promise[Boolean]()
     val t = Task {
       val tcpObservable = AsyncTcpClient.tcpReader("monix.io", 443)
       tcpObservable.subscribe(
         _ => Stop,
-        err => p.failure(err))
+        err => p.failure(err)
+      )
     }.map { c =>
       c.cancel()
       p.success(true)
     }
     t.runAsync
 
-    Await.result(p.future, 5.seconds) shouldBe true
+    assert(Await.result(p.future, 5.seconds))
   }
 
-  it should "write to a TCP (HTTP) connection successfully" in {
+  test("write to a TCP (HTTP) connection successfully") {
     val data = Array.fill(8)("monix".getBytes())
     val chunkSize = 2 // very small chunks for testing
 
@@ -45,26 +46,27 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
       .runAsync(callback)
 
     val result = Await.result(p.future, 5.seconds)
-    assert(result, true)
+    assert(result)
   }
 
-  it should "be able to make a HTTP GET request and pipe the response back" in {
+  test("be able to make a HTTP GET request and pipe the response back") {
     val p = Promise[String]()
     val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
 
     val recv = new StringBuffer("")
-    asyncTcpClient.tcpObservable.map { _.subscribe(
-      (bytes: Array[Byte]) => {
-        recv.append(new String(bytes, "UTF-8"))
-        if(recv.toString.contains("monix")) {
-          p.success(recv.toString)
-          Stop // stop as soon as the response is received
-        }
-        else {
-          Continue
-        }
-      },
-      err => p.failure(err))
+    asyncTcpClient.tcpObservable.map {
+      _.subscribe(
+        (bytes: Array[Byte]) => {
+          recv.append(new String(bytes, "UTF-8"))
+          if (recv.toString.contains("monix")) {
+            p.success(recv.toString)
+            Stop // stop as soon as the response is received
+          } else {
+            Continue
+          }
+        },
+        err => p.failure(err)
+      )
     }.runAsync
 
     /* trigger a response to be read */
@@ -75,12 +77,12 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     }.runAsync
 
     val result = Await.result(p.future, 10.seconds)
-    result.length should be > 0
-    result.startsWith("HTTP/1.1 200 OK") shouldBe true
-    result.contains("monix") shouldBe true
+    assert(result.length > 0)
+    assert(result.startsWith("HTTP/1.1 200 OK"))
+    assert(result.contains("monix"))
   }
 
-  it should "be able to reuse the same socket and make multiple requests" in {
+  test("be able to reuse the same socket and make multiple requests") {
     val p = Promise[String]()
     val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
 
@@ -94,12 +96,12 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
             /* stop as soon as the second response is received */
             p.success(recv.toString)
             Stop
-          }
-          else {
+          } else {
             Continue
           }
         },
-        err => p.failure(err))
+        err => p.failure(err)
+      )
     }.runAsync
 
     // test with small chunks (2 bytes) to test order
@@ -118,11 +120,10 @@ class TcpIntegrationSpec extends FlatSpec with Matchers {
     // trigger response to be read
     writeT.runAsync
 
-
     val result = Await.result(p.future, 20.seconds)
-    result.length should be > 0
-    result.startsWith("HTTP/1.1 200 OK") shouldBe true
-    result.contains("monix") shouldBe true
-    result.contains("monix2") shouldBe true
+    assert(result.length > 0)
+    assert(result.startsWith("HTTP/1.1 200 OK"))
+    assert(result.contains("monix"))
+    assert(result.contains("monix2"))
   }
 }
