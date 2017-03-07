@@ -1,22 +1,35 @@
+/*
+ * Copyright (c) 2014-2017 by its authors. Some rights reserved.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.nio
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{ Files, Paths }
 import java.util
-
 import monix.eval.Callback
-import monix.nio.text.UTF8Codec.{utf8Decode, utf8Encode}
+import monix.nio.text.UTF8Codec.{ utf8Decode, utf8Encode }
+import monix.execution.Scheduler.Implicits.{ global => ctx }
 import monix.reactive.Observable
-import org.scalatest.FunSuite
 import file._
-
-import scala.concurrent.{Await, Promise}
+import minitest.SimpleTestSuite
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 
-class CodecTest extends FunSuite {
-
+object CodecTest extends SimpleTestSuite {
   test("decode file utf8") {
-    implicit val ctx = monix.execution.Scheduler.Implicits.global
-
     val from = Paths.get(this.getClass.getResource("/testFiles/specialChars.txt").toURI)
 
     val p = Promise[Seq[Byte]]()
@@ -37,7 +50,6 @@ class CodecTest extends FunSuite {
   }
 
   test("decode special chars") {
-    implicit val ctx = monix.execution.Scheduler.Implicits.global
     val strSeq = Seq("A", "\u0024", "\u00A2", "\u20AC", new String(Array(0xF0, 0x90, 0x8D, 0x88).map(_.toByte)), "B")
 
     for (grouping <- 1 to 12) {
@@ -56,14 +68,11 @@ class CodecTest extends FunSuite {
       }
       obsSeq.toListL.runAsync(callback)
       val result = Await.result(p.future, 3.second)
-      if (!result) info(s"grouping=$grouping")
       assert(result)
     }
   }
 
   test("copy file utf8") {
-    implicit val ctx = monix.execution.Scheduler.Implicits.global
-
     val from = Paths.get(this.getClass.getResource("/testFiles/specialChars.txt").toURI)
     val to = Paths.get("src/test/resources/res.txt")
     val consumer = file.writeAsync(to)
@@ -75,7 +84,7 @@ class CodecTest extends FunSuite {
 
     readAsync(from, 3)
       .pipeThrough(utf8Decode)
-      .map{ str =>
+      .map { str =>
         //Console.println(str)
         str
       }
@@ -86,6 +95,6 @@ class CodecTest extends FunSuite {
     val f1 = Files.readAllBytes(from)
     val f2 = result
     Files.delete(to)
-    assert(f1.size === f2)
+    assertEquals(f1.size, f2)
   }
 }

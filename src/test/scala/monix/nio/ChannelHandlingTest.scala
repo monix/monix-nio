@@ -1,24 +1,43 @@
+/*
+ * Copyright (c) 2014-2017 by its authors. Some rights reserved.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.nio
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{ Files, Paths }
 
 import minitest.TestSuite
 import monix.eval.Callback
 import monix.execution.atomic.Atomic
 import monix.execution.schedulers.TestScheduler
-import monix.nio.file.{AsyncFileReaderObservable, AsyncFileWriterConsumer}
+import monix.nio.file.{ AsyncFileReaderObservable, AsyncFileWriterConsumer }
 
 object ChannelHandlingTest extends TestSuite[TestScheduler] {
   def setup(): TestScheduler = TestScheduler()
 
   def tearDown(s: TestScheduler): Unit = {
-    assert(s.state.tasks.isEmpty,
-      "TestScheduler should have no pending tasks")
+    assert(
+      s.state.tasks.isEmpty,
+      "TestScheduler should have no pending tasks"
+    )
   }
 
   def tick(n: Int)(implicit s: TestScheduler) = (1 to n) map (_ => s.tickOne())
 
-  test ("full parse") { implicit s =>
+  test("full parse") { implicit s =>
     val from = Paths.get(this.getClass.getResource("/testFiles/file.txt").toURI)
 
     val chunkSize = 2
@@ -39,7 +58,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     assertEquals(readChannel.getBytesReadPosition, writeChannel.getBytesWritePosition)
   }
 
-  test ("cancel a consumer") { implicit s =>
+  test("cancel a consumer") { implicit s =>
     val from = Paths.get(this.getClass.getResource("/testFiles/file.txt").toURI)
 
     val chunkSize = 17
@@ -64,7 +83,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     tick(3)
 
     //check 2 reads have occurred
-    assert(writeTo.get.size==2)
+    assert(writeTo.get.size == 2)
     //cancel the consumer
     cancelable.cancel()
     s.tickOne()
@@ -81,7 +100,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
   }
 
-  test ("error on read is handled") { implicit s =>
+  test("error on read is handled") { implicit s =>
     val from = Paths.get(this.getClass.getResource("/testFiles/file.txt").toURI)
 
     val chunkSize = 3
@@ -122,7 +141,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     assertEquals(writeChannel.getBytesWritePosition, 1)
   }
 
-  test ("error on write is handled") { implicit s =>
+  test("error on write is handled") { implicit s =>
     val from = Paths.get(this.getClass.getResource("/testFiles/file.txt").toURI)
 
     val chunkSize = 3

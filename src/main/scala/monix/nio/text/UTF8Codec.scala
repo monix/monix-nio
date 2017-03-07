@@ -1,30 +1,47 @@
+/*
+ * Copyright (c) 2014-2017 by its authors. Some rights reserved.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.nio.text
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import monix.execution.Ack.{Continue, Stop}
+import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.atomic.Atomic
 import monix.execution.exceptions.APIContractViolationException
-import monix.execution.{Ack, Cancelable}
+import monix.execution.{ Ack, Cancelable }
 import monix.reactive.observers.Subscriber
 import monix.reactive.subjects.Subject
-import monix.reactive.{Observable, Observer, Pipe}
+import monix.reactive.{ Observable, Observer, Pipe }
 
 import scala.concurrent.Future
 
 object UTF8Codec {
-  case object utf8Decode extends Pipe[Array[Byte], String]{
+  case object utf8Decode extends Pipe[Array[Byte], String] {
     override def unicast: (Observer[Array[Byte]], Observable[String]) = {
       val p = new UTF8DecodingSubject()
-      (p,p)
+      (p, p)
     }
   }
 
   case object utf8Encode extends Pipe[String, Array[Byte]] {
     override def unicast: (Observer[String], Observable[Array[Byte]]) = {
       val p = new UTF8EncodingSubject()
-      (p,p)
+      (p, p)
     }
   }
   private val utf8Charset = Charset.forName("UTF-8")
@@ -43,7 +60,7 @@ object UTF8Codec {
         subscriber.onError(APIContractViolationException(this.getClass.getName))
         Cancelable.empty
       } else {
-        remaining.put(0,0)
+        remaining.put(0, 0)
         Cancelable(() => stopOnNext.set(true))
       }
     }
@@ -59,7 +76,7 @@ object UTF8Codec {
         val remainingArray = remaining.array()
         val oldRemaining =
           if (remainingArray(0) == 0) Array.empty[Byte]
-          else remainingArray.slice(1, 1+remainingArray(0))
+          else remainingArray.slice(1, 1 + remainingArray(0))
         val (current, newRemaining) = getString(elem, oldRemaining)
         remaining.clear()
         remaining.put(newRemaining.length.toByte)
@@ -92,7 +109,7 @@ object UTF8Codec {
       }
     }
 
-    private def indexIncrement(b: Byte): Int  = {
+    private def indexIncrement(b: Byte): Int = {
       if ((b & 0x80) == 0) 0 // ASCII byte
       else if ((b & 0xE0) == 0xC0) 2 // first of a 2 byte seq
       else if ((b & 0xF0) == 0xE0) 3 // first of a 3 byte seq
@@ -102,7 +119,7 @@ object UTF8Codec {
 
     private def getSplitAt(bytes: Array[Byte]) = {
       val lastThree = bytes.drop(0 max bytes.length - 3)
-      val addBytesFromLast3 = lastThree.zipWithIndex.foldLeft(Option.empty[Int]){ (acc, elem) =>
+      val addBytesFromLast3 = lastThree.zipWithIndex.foldLeft(Option.empty[Int]) { (acc, elem) =>
         val increment = indexIncrement(elem._1)
         val index = elem._2
         if (index + increment > lastThree.length) {
@@ -137,8 +154,7 @@ object UTF8Codec {
       if (stopOnNext.get || subscriber.get.isEmpty) {
         //we stop if no subscriber or canceled from outside
         Stop
-      }
-      else {
+      } else {
         subscriber.get.get.onNext(elem.getBytes(utf8Charset))
       }
     }

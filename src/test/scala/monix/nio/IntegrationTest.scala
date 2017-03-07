@@ -1,18 +1,32 @@
+/*
+ * Copyright (c) 2014-2017 by its authors. Some rights reserved.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.nio
 
-import java.nio.file.{Files, Paths, StandardOpenOption}
+import java.nio.file.{ Files, Paths, StandardOpenOption }
 import java.util
-
-import org.scalatest.FunSuite
 import file._
+import minitest.SimpleTestSuite
 import monix.eval.Callback
-
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-
-class IntegrationTest extends FunSuite {
+object IntegrationTest extends SimpleTestSuite {
   test("same file generated") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
@@ -28,12 +42,13 @@ class IntegrationTest extends FunSuite {
     readAsync(from, 3)
       .consumeWith(consumer)
       .runAsync(callback)
+
     val result = Await.result(p.future, 3.second)
-    assert(result, true)
+    assert(result)
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
-    Files.delete(to)//clean
+    Files.delete(to) //clean
     assert(util.Arrays.equals(f1, f2))
   }
 
@@ -59,15 +74,15 @@ class IntegrationTest extends FunSuite {
     readAsync(from, 3)
       .consumeWith(consumer)
       .runAsync(callback)
+
     val result = Await.result(p.future, 3.second)
-    assert(result, true)
+    assert(result)
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
-    Files.delete(to)//clean
+    Files.delete(to) //clean
+
     val all1: Seq[Byte] = strSeq.flatMap(_.getBytes) ++ f1.toSeq
-    assert(all1 === f2.toSeq)
-
+    assertEquals(all1, f2.toSeq)
   }
-
 }
