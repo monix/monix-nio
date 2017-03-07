@@ -9,4 +9,5 @@ trait AsyncMonixChannel extends AutoCloseable {
   def close(): Unit
   def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit
   def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit
+  def closeOnComplete = true
 }

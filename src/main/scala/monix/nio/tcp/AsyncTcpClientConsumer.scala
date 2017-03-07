@@ -1,22 +1,16 @@
 package monix.nio.tcp
 
 import java.net.InetSocketAddress
-import java.nio.ByteBuffer
 
 import monix.eval.Callback
-import monix.execution.Ack.{Continue, Stop}
-import monix.execution.{Ack, Scheduler, UncaughtExceptionReporter}
-import monix.execution.atomic.Atomic
+import monix.execution.Scheduler
 import monix.execution.cancelables.{AssignableCancelable, SingleAssignmentCancelable}
-import monix.nio.cancelables.SingleFunctionCallCancelable
-import monix.reactive.Consumer
-import monix.reactive.observers.Subscriber
+import monix.nio.AsyncChannelConsumer
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
-class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Consumer[Array[Byte], Long] {
-
+class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer[SocketClient] {
   private[this] var socketClient: Option[SocketClient] = None
 
   private[tcp] def this(client: SocketClient) {
@@ -24,105 +18,33 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Cons
     this.socketClient = Option(client)
   }
 
-  override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
-    class AsyncTcpSubscriber extends Subscriber[Array[Byte]] { self =>
-      implicit val scheduler = s
+  override protected def channel = socketClient
 
-      private[this] val callbackCalled = Atomic(false)
-      private[this] var written = 0L
-
-      private[this] val connectedPromise = Promise[Unit]()
-      private[this] val connectedSignal = connectedPromise.future
-      private[this] val connectCallback = new Callback[Void]() {
-        override def onSuccess(value: Void): Unit = {
-          connectedPromise.success(())
-        }
-        override def onError(ex: Throwable): Unit = {
-          connectedPromise.failure(ex)
-          closeChannel()
-          self.onError(ex)
-        }
+  private[this] val connectedPromise = Promise[Unit]()
+  private[this] val connectedSignal = connectedPromise.future
+  private[this] val connectCallback = new Callback[Void]() {
+    override def onSuccess(value: Void): Unit = {
+      connectedPromise.success(())
+    }
+    override def onError(ex: Throwable): Unit = {
+      connectedPromise.failure(ex)
+      //closeChannel()
+      //self.onError(ex)
+    }
+  }
+  override def init() = {
+    try {
+      if (socketClient.isDefined) {
+        connectedPromise.success(())
       }
-
-      def init() = try {
-        if (socketClient.isDefined) {
-          connectedPromise.success(())
-        }
-        else {
-          socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = self.onError))
-          socketClient.foreach(_.connect(connectCallback))
-        }
-      }
-      catch {
-        case NonFatal(ex) => sendError(ex)
-      }
-
-      def onCancel(): Unit = {
-        callbackCalled.set(true) // the callback should not be called after cancel
-        socketClient.collect { case sc if sc.closeOnComplete => closeChannel()}
-      }
-
-      override def onComplete(): Unit = {
-        socketClient.collect { case sc if sc.closeOnComplete => closeChannel()}
-        if (callbackCalled.compareAndSet(expect = false, update = true))
-          cb.onSuccess(written)
-      }
-
-      override def onError(ex: Throwable): Unit = {
-        closeChannel()
-        sendError(ex)
-      }
-
-      override def onNext(elem: Array[Byte]): Future[Ack] = {
-        def write(): Future[Ack] = {
-          val promise = Promise[Ack]()
-          socketClient.foreach { sc =>
-            try {
-              sc.write(ByteBuffer.wrap(elem), 0, new Callback[Int] {
-                override def onError(exc: Throwable) = {
-                  closeChannel()
-                  sendError(exc)
-                  promise.success(Stop) // We have an ERROR we STOP the consumer
-                }
-
-                override def onSuccess(result: Int): Unit = {
-                  written += result
-                  promise.success(Continue)
-                }
-              })
-            }
-            catch {
-              case NonFatal(ex) =>
-                sendError(ex)
-                promise.success(Stop)
-            }
-          }
-
-          promise.future
-        }
-
-        if (connectedSignal.value.isEmpty) {
-          connectedSignal.flatMap(_ => write())
-        }
-        else {
-          write()
-        }
-      }
-
-      private def sendError(t: Throwable) =
-        if (callbackCalled.compareAndSet(expect = false, update = true))
-          s.execute(new Runnable {def run() = cb.onError(t)})
-
-      private def closeChannel()(implicit reporter: UncaughtExceptionReporter) = {
-        socketClient.foreach(_.close())
+      else {
+        socketClient = Option(SocketClient(new InetSocketAddress(host, port) /*onOpenError = self.onError */))
+        socketClient.foreach(_.connect(connectCallback))
       }
     }
-
-    val out = new AsyncTcpSubscriber()
-    out.init()
-
-    val cancelable = SingleFunctionCallCancelable(out.onCancel)
-    val conn = SingleAssignmentCancelable.plusOne(cancelable)
-    (out, conn)
+    catch {
+      case NonFatal(ex) => () //sendError(ex)
+    }
+    connectedSignal
   }
 }

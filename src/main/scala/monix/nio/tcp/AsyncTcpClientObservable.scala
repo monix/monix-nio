@@ -6,13 +6,13 @@ import monix.eval.Callback
 import monix.nio._
 import monix.reactive.observers.Subscriber
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Promise
 
 final class AsyncTcpClientObservable private[tcp] (
   host: String, port: Int,
   buffSize: Int = 256 * 1024) extends AsyncChannelObservable[SocketClient] {
 
-  override def bufferSize: Int = buffSize
+  override def bufferSize = buffSize
 
   private[this] val connectedSignal = Promise[Unit]()
   private[this] var socketClient: Option[SocketClient] = None
@@ -22,9 +22,9 @@ final class AsyncTcpClientObservable private[tcp] (
     this.socketClient = Option(client)
   }
 
-  override protected def channel: Option[SocketClient] = socketClient
+  override protected def channel = socketClient
 
-  override def init(subscriber: Subscriber[Array[Byte]]): Future[Unit] = {
+  override def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler
     if (socketClient.isDefined) {
       connectedSignal.success(())

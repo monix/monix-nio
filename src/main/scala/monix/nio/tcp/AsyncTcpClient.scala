@@ -12,7 +12,7 @@ class AsyncTcpClient private (
   private[this] val underlyingSocketClient = SocketClient(
     new java.net.InetSocketAddress(host, port),
     onOpenError = onOpenError,
-    closeOnComplete = false)
+    closeWhenDone = false)
   private[this] val connectedSignal = scala.concurrent.Promise[Unit]()
   private[this] val connectCallback = new Callback[Void]() {
     override def onSuccess(value: Void): Unit = {

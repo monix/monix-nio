@@ -19,7 +19,7 @@ protected[tcp] case class SocketClient(
   keepAlive: Boolean = false,
   noDelay: Boolean = false,
   onOpenError: Throwable => Unit = _ => (),
-  closeOnComplete: Boolean = true) extends AsyncMonixChannel {
+  closeWhenDone: Boolean = true) extends AsyncMonixChannel {
 
   private[this] lazy val asyncSocketChannel: Either[Throwable, AsynchronousSocketChannel] = try {
     val ag = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool())
@@ -35,6 +35,8 @@ protected[tcp] case class SocketClient(
   }
 
   override def size(): Long = 0
+
+  override def closeOnComplete: Boolean = closeWhenDone
 
   override def close(): Unit = {
     asyncSocketChannel.fold(_ => (), c => c.close())
