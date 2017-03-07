@@ -26,7 +26,7 @@ might have bugs, use with great care!
 ### Adding dependency to SBT
 
 ```scala
-libraryDependencies += "io.monix" %% "monix-nio" % "0.1.0"
+libraryDependencies += "io.monix" %% "monix-nio" % "0.0.1"
 ```
 
 ### Read from a text file
