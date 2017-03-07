@@ -17,16 +17,16 @@
 
 package monix.nio
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{ Files, Paths }
 import java.util
 
 import monix.eval.Callback
-import monix.nio.text.UTF8Codec.{utf8Decode, utf8Encode}
+import monix.nio.text.UTF8Codec.{ utf8Decode, utf8Encode }
 import monix.reactive.Observable
 import org.scalatest.FunSuite
 import file._
 
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 
 class CodecTest extends FunSuite {
@@ -92,7 +92,7 @@ class CodecTest extends FunSuite {
 
     readAsync(from, 3)
       .pipeThrough(utf8Decode)
-      .map{ str =>
+      .map { str =>
         //Console.println(str)
         str
       }

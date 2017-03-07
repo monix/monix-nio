@@ -80,7 +80,7 @@ class AsyncFileWriterConsumer(channel: AsyncMonixChannel, startPosition: Long = 
         promise.future
       }
 
-      def onCancel() = {
+      def onCancel(): Unit = {
         callbackCalled.set(true) //the callback should not be called after cancel
         closeChannel()
       }
@@ -88,7 +88,7 @@ class AsyncFileWriterConsumer(channel: AsyncMonixChannel, startPosition: Long = 
 
     val out = new AsyncFileSubscriber()
 
-    val myCancelable = SingleFunctionCallCancelable(out.onCancel)
+    val myCancelable = SingleFunctionCallCancelable(out.onCancel _)
     val conn = SingleAssignmentCancelable.plusOne(myCancelable)
     (out, conn)
   }

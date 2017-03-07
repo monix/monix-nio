@@ -17,17 +17,16 @@
 
 package monix.nio
 
-import java.nio.file.{Files, Paths, StandardOpenOption}
+import java.nio.file.{ Files, Paths, StandardOpenOption }
 import java.util
 
 import org.scalatest.FunSuite
 import file._
 import monix.eval.Callback
 
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-
 
 class IntegrationTest extends FunSuite {
   test("same file generated") {
@@ -50,7 +49,7 @@ class IntegrationTest extends FunSuite {
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
-    Files.delete(to)//clean
+    Files.delete(to) //clean
     assert(util.Arrays.equals(f1, f2))
   }
 
@@ -81,7 +80,7 @@ class IntegrationTest extends FunSuite {
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
-    Files.delete(to)//clean
+    Files.delete(to) //clean
     val all1: Seq[Byte] = strSeq.flatMap(_.getBytes) ++ f1.toSeq
     assert(all1 === f2.toSeq)
 

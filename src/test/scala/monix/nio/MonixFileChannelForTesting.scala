@@ -19,7 +19,7 @@ package monix.nio
 
 import java.nio.ByteBuffer
 
-import monix.eval.{Callback, Task}
+import monix.eval.{ Callback, Task }
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
 
