@@ -110,7 +110,7 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
   override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
     val out = new AsyncChannelSubscriber(cb)(s)
 
-    val cancelable = SingleFunctionCallCancelable(out.onCancel)
+    val cancelable = SingleFunctionCallCancelable(() => out.onCancel())
     val conn = SingleAssignmentCancelable.plusOne(cancelable)
     (out, conn)
   }
