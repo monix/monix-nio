@@ -1,8 +1,25 @@
+/*
+ * Copyright (c) 2014-2017 by its authors. Some rights reserved.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.nio.file.internal
 
 import java.nio.ByteBuffer
-import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
-import java.nio.file.{Path, StandardOpenOption}
+import java.nio.channels.{ AsynchronousFileChannel, CompletionHandler }
+import java.nio.file.{ Path, StandardOpenOption }
 import java.util.concurrent.ExecutorService
 
 import monix.eval.Callback
@@ -14,7 +31,7 @@ import monix.nio.AsyncMonixChannel
 import collection.JavaConverters._
 import scala.util.control.NonFatal
 
-sealed trait AsyncChannel{
+sealed trait AsyncChannel {
   def channel: AsyncMonixChannel
   private val channelOpen = Atomic(true)
 
@@ -25,8 +42,7 @@ sealed trait AsyncChannel{
     try {
       val open = channelOpen.getAndSet(false)
       if (open) channel.close()
-    }
-    catch {
+    } catch {
       case NonFatal(ex) => reporter.reportFailure(ex)
     }
 }
@@ -49,7 +65,8 @@ private[file] object AsyncMonixFileChannel {
   ) =
     try {
       AsyncMonixFileChannelWrapper(
-        AsynchronousFileChannel.open(path, options.asJava, service.orNull))
+        AsynchronousFileChannel.open(path, options.asJava, service.orNull)
+      )
     } catch {
       case NonFatal(exc) =>
         onOpenError(exc)
@@ -72,13 +89,13 @@ private[file] object AsyncMonixFileChannel {
 
 }
 
-private[internal] case class AsyncMonixFileChannelWrapper(asyncFileChannel: AsynchronousFileChannel) extends AsyncMonixChannel{
+private[internal] case class AsyncMonixFileChannelWrapper(asyncFileChannel: AsynchronousFileChannel) extends AsyncMonixChannel {
   override def size() = asyncFileChannel.size()
   def readChannel(dst: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) =
     asyncFileChannel.read(dst, position, attachment, handler)
 
   def write(b: ByteBuffer, position: Long, attachment: Null, handler: CompletionHandler[Integer, Null]) =
-    asyncFileChannel.write(b, position,  attachment, handler)
+    asyncFileChannel.write(b, position, attachment, handler)
 
   def close() = {
     asyncFileChannel.close()
@@ -106,8 +123,7 @@ private[nio] abstract class AsyncReadChannel(val channel: AsyncMonixChannel) ext
     channel.read(dst, position, callback)
 }
 
-
 private[nio] abstract class AsyncWriterChannel(val channel: AsyncMonixChannel) extends AsyncChannel {
   protected def write(b: ByteBuffer, position: Long, callback: Callback[Int]) =
-    channel.write(b, position,  callback)
+    channel.write(b, position, callback)
 }

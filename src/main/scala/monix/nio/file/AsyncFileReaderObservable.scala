@@ -1,10 +1,27 @@
+/*
+ * Copyright (c) 2014-2017 by its authors. Some rights reserved.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.nio.file
 
 import java.nio.ByteBuffer
 
-import monix.eval.{Callback, Task}
-import monix.execution.Ack.{Continue, Stop}
-import monix.execution.{Cancelable, UncaughtExceptionReporter}
+import monix.eval.{ Callback, Task }
+import monix.execution.Ack.{ Continue, Stop }
+import monix.execution.{ Cancelable, UncaughtExceptionReporter }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignmentCancelable
 import monix.execution.exceptions.APIContractViolationException
@@ -17,7 +34,7 @@ import monix.reactive.observers.Subscriber
 import scala.util.control.NonFatal
 
 class AsyncFileReaderObservable(channel: AsyncMonixChannel, size: Int)
-  extends AsyncReadChannel(channel) with Observable[Array[Byte]]{
+    extends AsyncReadChannel(channel) with Observable[Array[Byte]] {
   private[this] val wasSubscribed = Atomic(false)
   private[this] val buffer = ByteBuffer.allocate(size)
 
@@ -26,8 +43,7 @@ class AsyncFileReaderObservable(channel: AsyncMonixChannel, size: Int)
     if (wasSubscribed.getAndSet(true)) {
       subscriber.onError(APIContractViolationException(this.getClass.getName))
       Cancelable.empty
-    }
-    else {
+    } else {
       try {
         val taskCallback = new Callback[Array[Byte]]() {
           override def onSuccess(value: Array[Byte]): Unit = {
@@ -48,8 +64,7 @@ class AsyncFileReaderObservable(channel: AsyncMonixChannel, size: Int)
           c.cancel()
         })
         SingleAssignmentCancelable.plusOne(singleFunctionCallCancelable)
-      }
-      catch {
+      } catch {
         case NonFatal(e) =>
           subscriber.onError(e)
           closeChannel()
@@ -70,8 +85,8 @@ class AsyncFileReaderObservable(channel: AsyncMonixChannel, size: Int)
 
   def loop(
     subscriber: Subscriber[Array[Byte]],
-    position: Long)
-    (implicit rep: UncaughtExceptionReporter): Task[Array[Byte]] = {
+    position: Long
+  )(implicit rep: UncaughtExceptionReporter): Task[Array[Byte]] = {
 
     buffer.clear()
     createReadTask(buffer, position).flatMap { result =>
