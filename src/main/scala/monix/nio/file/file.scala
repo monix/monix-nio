@@ -3,7 +3,7 @@ package monix.nio
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
 
-import monix.nio.file.internal.AsyncMonixFileChannel
+import monix.nio.file.internal.AsyncFileChannel
 
 package object file {
   def readAsync(
@@ -13,7 +13,7 @@ package object file {
     onOpenError: Throwable => Unit = _ =>()): AsyncFileReaderObservable = {
 
     require(chunkSize > 1)
-    val channel = AsyncMonixFileChannel.openRead(path, Set.empty, executorService, onOpenError)
+    val channel = AsyncFileChannel.openRead(path, Set.empty, executorService, onOpenError)
     new AsyncFileReaderObservable(channel, chunkSize)
   }
 
@@ -33,7 +33,7 @@ package object file {
     executorService: Option[ExecutorService] = None,
     onOpenError: Throwable => Unit = _ =>()): AsyncFileWriterConsumer = {
 
-    val channel = AsyncMonixFileChannel.openWrite(path, flags.toSet, executorService, onOpenError)
+    val channel = AsyncFileChannel.openWrite(path, flags.toSet, executorService, onOpenError)
     new AsyncFileWriterConsumer(channel, startPosition)
   }
 }

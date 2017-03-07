@@ -17,86 +17,86 @@ import scala.util.control.NonFatal
 abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Array[Byte], Long] {
   protected def channel: Option[T]
   protected def withInitialPosition: Long = 0l
-  def init(): Future[Unit] = Future.successful(())
+  def init(subscriber: AsyncChannelSubscriber): Future[Unit] = Future.successful(())
 
-  override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
-    class AsyncChannelSubscriber extends Subscriber[Array[Byte]] {
-      implicit val scheduler = s
+  class AsyncChannelSubscriber(consumerCallback: Callback[Long])(implicit val scheduler: Scheduler)
+    extends Subscriber[Array[Byte]] { self =>
 
-      private[this] lazy val initFuture = init()
-      private[this] val callbackCalled = Atomic(false)
-      private[this] var position = withInitialPosition
+    private[this] lazy val initFuture = init(self)
+    private[this] val callbackCalled = Atomic(false)
+    private[this] var position = withInitialPosition
 
-      override def onNext(elem: Array[Byte]): Future[Ack] = {
-        def write(): Future[Ack] = {
-          val promise = Promise[Ack]()
-          channel.foreach { sc =>
-            try {
-              sc.write(ByteBuffer.wrap(elem), position, new Callback[Int] {
-                override def onError(exc: Throwable) = {
-                  closeChannel()
-                  sendError(exc)
-                  promise.success(Stop)
-                }
-
-                override def onSuccess(result: Int): Unit = {
-                  position += result
-                  promise.success(Continue)
-                }
-              })
-            }
-            catch {
-              case NonFatal(ex) =>
-                sendError(ex)
+    override def onNext(elem: Array[Byte]): Future[Ack] = {
+      def write(): Future[Ack] = {
+        val promise = Promise[Ack]()
+        channel.foreach { sc =>
+          try {
+            sc.write(ByteBuffer.wrap(elem), position, new Callback[Int] {
+              override def onError(exc: Throwable) = {
+                closeChannel()
+                sendError(exc)
                 promise.success(Stop)
-            }
+              }
+
+              override def onSuccess(result: Int): Unit = {
+                position += result
+                promise.success(Continue)
+              }
+            })
           }
-
-          promise.future
+          catch {
+            case NonFatal(ex) =>
+              sendError(ex)
+              promise.success(Stop)
+          }
         }
 
-        if (initFuture.value.isEmpty) {
-          initFuture.flatMap(_ => write())
-        }
-        else {
-          write()
-        }
+        promise.future
       }
 
-      override def onComplete(): Unit = {
-        channel.collect { case sc if sc.closeOnComplete => closeChannel()}
-        if (callbackCalled.compareAndSet(expect = false, update = true))
-          cb.onSuccess(position)
+      if (initFuture.value.isEmpty) {
+        initFuture.flatMap(_ => write())
       }
-
-      override def onError(ex: Throwable): Unit = {
-        closeChannel()
-        sendError(ex)
-      }
-
-
-      protected[nio] def onCancel(): Unit = {
-        callbackCalled.set(true) // the callback should not be called after cancel
-        channel.collect { case sc if sc.closeOnComplete => closeChannel()}
-      }
-
-      protected def sendError(t: Throwable) = if (callbackCalled.compareAndSet(expect = false, update = true))
-        scheduler.execute(new Runnable { def run() = cb.onError(t)})
-
-
-      private[this] val channelOpen = Atomic(true)
-      protected def closeChannel()(implicit reporter: UncaughtExceptionReporter) = {
-        try {
-          val open = channelOpen.getAndSet(false)
-          if (open) channel.foreach(_.close())
-        }
-        catch {
-          case NonFatal(ex) => reporter.reportFailure(ex)
-        }
+      else {
+        write()
       }
     }
 
-    val out = new AsyncChannelSubscriber()
+    override def onComplete(): Unit = {
+      channel.collect { case sc if sc.closeOnComplete => closeChannel()}
+      if (callbackCalled.compareAndSet(expect = false, update = true))
+        consumerCallback.onSuccess(position)
+    }
+
+    override def onError(ex: Throwable): Unit = {
+      closeChannel()
+      sendError(ex)
+    }
+
+
+    protected[nio] def onCancel(): Unit = {
+      callbackCalled.set(true) // the callback should not be called after cancel
+      channel.collect { case sc if sc.closeOnComplete => closeChannel()}
+    }
+
+    protected[nio] def sendError(t: Throwable) = if (callbackCalled.compareAndSet(expect = false, update = true))
+      scheduler.execute(new Runnable { def run() = consumerCallback.onError(t)})
+
+
+    private[this] val channelOpen = Atomic(true)
+    protected[nio] def closeChannel()(implicit reporter: UncaughtExceptionReporter) = {
+      try {
+        val open = channelOpen.getAndSet(false)
+        if (open) channel.foreach(_.close())
+      }
+      catch {
+        case NonFatal(ex) => reporter.reportFailure(ex)
+      }
+    }
+  }
+
+  override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
+    val out = new AsyncChannelSubscriber(cb)(s)
 
     val cancelable = SingleFunctionCallCancelable(out.onCancel)
     val conn = SingleAssignmentCancelable.plusOne(cancelable)

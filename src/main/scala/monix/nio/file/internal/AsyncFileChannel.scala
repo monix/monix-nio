@@ -12,7 +12,7 @@ import monix.nio.AsyncMonixChannel
 import collection.JavaConverters._
 import scala.util.control.NonFatal
 
-private[file] object AsyncMonixFileChannel {
+private[file] object AsyncFileChannel {
   def openUnsafe(
     path: Path,
     options: Set[StandardOpenOption],

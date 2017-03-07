@@ -3,8 +3,6 @@ package monix.nio.tcp
 import java.net.InetSocketAddress
 
 import monix.eval.Callback
-import monix.execution.Scheduler
-import monix.execution.cancelables.{AssignableCancelable, SingleAssignmentCancelable}
 import monix.nio.AsyncChannelConsumer
 
 import scala.concurrent.Promise
@@ -20,31 +18,32 @@ class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends Asyn
 
   override protected def channel = socketClient
 
-  private[this] val connectedPromise = Promise[Unit]()
-  private[this] val connectedSignal = connectedPromise.future
-  private[this] val connectCallback = new Callback[Void]() {
-    override def onSuccess(value: Void): Unit = {
-      connectedPromise.success(())
-    }
-    override def onError(ex: Throwable): Unit = {
-      connectedPromise.failure(ex)
-      //closeChannel()
-      //self.onError(ex)
-    }
-  }
-  override def init() = {
-    try {
-      if (socketClient.isDefined) {
+
+  override def init(subscriber: AsyncChannelSubscriber) = {
+    import subscriber.scheduler
+
+    val connectedPromise = Promise[Unit]()
+    val connectCallback = new Callback[Void]() {
+      override def onSuccess(value: Void): Unit = {
         connectedPromise.success(())
       }
+      override def onError(ex: Throwable): Unit = {
+        connectedPromise.failure(ex)
+        subscriber.closeChannel()
+        subscriber.onError(ex)
+      }
+    }
+
+    try {
+      if (socketClient.isDefined) connectedPromise.success(())
       else {
-        socketClient = Option(SocketClient(new InetSocketAddress(host, port) /*onOpenError = self.onError */))
+        socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = subscriber.onError))
         socketClient.foreach(_.connect(connectCallback))
       }
     }
     catch {
-      case NonFatal(ex) => () //sendError(ex)
+      case NonFatal(ex) => subscriber.sendError(ex)
     }
-    connectedSignal
+    connectedPromise.future
   }
 }
