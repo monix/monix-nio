@@ -19,16 +19,14 @@ package monix.nio
 
 import java.nio.file.{ Files, Paths, StandardOpenOption }
 import java.util
-
-import org.scalatest.FunSuite
 import file._
+import minitest.SimpleTestSuite
 import monix.eval.Callback
-
 import scala.concurrent.{ Await, Promise }
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class IntegrationTest extends FunSuite {
+object IntegrationTest extends SimpleTestSuite {
   test("same file generated") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
@@ -44,8 +42,9 @@ class IntegrationTest extends FunSuite {
     readAsync(from, 3)
       .consumeWith(consumer)
       .runAsync(callback)
+
     val result = Await.result(p.future, 3.second)
-    assert(result, true)
+    assert(result)
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
@@ -75,15 +74,15 @@ class IntegrationTest extends FunSuite {
     readAsync(from, 3)
       .consumeWith(consumer)
       .runAsync(callback)
+
     val result = Await.result(p.future, 3.second)
-    assert(result, true)
+    assert(result)
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
     Files.delete(to) //clean
+
     val all1: Seq[Byte] = strSeq.flatMap(_.getBytes) ++ f1.toSeq
-    assert(all1 === f2.toSeq)
-
+    assertEquals(all1, f2.toSeq)
   }
-
 }

@@ -103,8 +103,6 @@ val appSettings = Seq(
       .withWarnScalaVersionEviction(false),
   libraryDependencies ++= Seq(
     "io.monix" %% "monix-reactive" % monixVersion,
-    // For testing ...
-    "org.scalatest" %% "scalatest" % "3.0.0" % "test",
     "io.monix" %% "minitest" % "0.27" % "test"
   ),
 

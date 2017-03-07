@@ -18,12 +18,12 @@
 package monix.nio
 
 import java.nio.ByteBuffer
-
 import monix.eval.{ Callback, Task }
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
 
 class MonixFileChannelForTesting(readingSeq: Vector[Array[Byte]], writeSeq: Atomic[Vector[Array[Byte]]])(implicit s: Scheduler) extends AsyncMonixChannel {
+
   private val readChannelPosition = Atomic(0)
   private val writeChannelPosition = Atomic(0)
   private val channelClosed = Atomic(false)
@@ -74,6 +74,7 @@ class MonixFileChannelForTesting(readingSeq: Vector[Array[Byte]], writeSeq: Atom
       r.runAsync(taskCallback(handler))
     }
   }
+
   def close() = {
     channelClosed.set(true)
   }
