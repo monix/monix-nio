@@ -31,9 +31,9 @@ libraryDependencies += "io.monix" %% "monix-nio" % "0.0.1"
 
 ```scala
 implicit val ctx = monix.execution.Scheduler.Implicits.global
-val from = Paths.get(this.getClass.getResource("/myFile.txt").toURI)
+val from = java.nio.file.Paths.get(this.getClass.getResource("/myFile.txt").toURI)
 monix.nio.file.readAsync(from, 30)
-  .pipeThrough(utf8Decode)//decode utf8, If you need Array[Byte] just skip the decoding
+  .pipeThrough(monix.nio.text.UTF8Codec.utf8Decode)//decode utf8, If you need Array[Byte] just skip the decoding
   .foreach(Console.print(_))//print each char
 ```
 
@@ -41,34 +41,40 @@ monix.nio.file.readAsync(from, 30)
 
 ```scala
 implicit val ctx = monix.execution.Scheduler.Implicits.global
-val to = Paths.get("/out.txt")
+val to = java.nio.file.Paths.get("/out.txt")
 val bytes = "Test String".getBytes.grouped(3)
-Observable
+monix.reactive.Observable
   .fromIterator(bytes)
-  .consumeWith(file.writeAsync(to))
+  .consumeWith(monix.nio.file.writeAsync(to))
   .runAsync
 ```
 
 ### Copy a file (text with decode and encode utf8)
 
 ```scala
-val from = Paths.get("from.txt")
-val to = Paths.get("to.txt")
-val consumer = file.writeAsync(to)
-readAsync(from, 3)
-  .pipeThrough(utf8Decode)
+val from = java.nio.file.Paths.get("from.txt")
+val to = java.nio.file.Paths.get("to.txt")
+val consumer = monix.nio.file.writeAsync(to)
+
+val callback = new monix.eval.Callback[Long] {
+  override def onSuccess(value: Long): Unit = println(s"Copied $value bytes.")
+  override def onError(ex: Throwable): Unit = println(ex)
+}
+
+monix.nio.file.readAsync(from, 3)
+  .pipeThrough(monix.nio.text.UTF8Codec.utf8Decode)
   .map{ str =>
     Console.println(str) // do something with it
     str
   }
-  .pipeThrough(utf8Encode)
+  .pipeThrough(monix.nio.text.UTF8Codec.utf8Encode)
   .consumeWith(consumer)
   .runAsync(callback)
 ```
 
 ### Read from TCP
 ```commandline
-$echo 'monix-tcp' | nc -l -k 9000
+$ echo 'monix-tcp' | nc -l -k 9000
 ```
 ```scala
 import monix.execution.Scheduler.Implicits.global
@@ -78,7 +84,7 @@ val callback = new monix.eval.Callback[Unit] {
   override def onError(ex: Throwable): Unit = println(ex)
 }
     
-val reader = monix.nio.tcp.AsyncTcpClient.tcpReader("localhost", 9000)
+val reader = monix.nio.tcp.readAsync("localhost", 9000)
 reader
   .consumeWith(monix.reactive.Consumer.foreach(c => Console.out.print(new String(c))))
   .runAsync(callback)
@@ -86,7 +92,7 @@ reader
 
 ### Write to TCP
 ```commandline
-$nc -l -k 9000
+$ nc -l -k 9000
 ```
 ```scala
 import monix.execution.Scheduler.Implicits.global
@@ -96,7 +102,7 @@ val callback = new monix.eval.Callback[Long] {
   override def onError(ex: Throwable): Unit = println(ex)
 }
 
-val tcpConsumer = monix.nio.tcp.AsyncTcpClient.tcpWriter("localhost", 9000)
+val tcpConsumer = monix.nio.tcp.writeAsync("localhost", 9000)
 val chunkSize = 2
 monix.reactive.Observable
   .fromIterator("monix-tcp".getBytes.grouped(chunkSize))
@@ -106,13 +112,13 @@ monix.reactive.Observable
 
 ### Make a raw HTTP request
 ```commandline
-$tail -f conn.txt | nc -l -k 9000 > conn.txt
+$ tail -f conn.txt | nc -l -k 9000 > conn.txt
 ```
 ```scala
 import monix.execution.Scheduler.Implicits.global
   
 val asyncTcpClient = 
-  monix.nio.tcp.AsyncTcpClient("httpbin.org", 80, t => println(s"ERR $t")) // or use localhost:9000
+  monix.nio.tcp.readWriteAsync("httpbin.org", 80) // or use localhost:9000
   
 val callbackR = new monix.eval.Callback[Unit] {
   override def onSuccess(value: Unit): Unit = println("OK")
