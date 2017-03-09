@@ -1,9 +1,9 @@
 package monix.nio.tcp
 
-import java.net.{InetSocketAddress, StandardSocketOptions}
+import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.spi.AsynchronousChannelProvider
-import java.nio.channels.{AsynchronousChannelGroup, AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler}
+import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler }
 import java.util.concurrent.Executors
 
 import monix.eval.Callback
@@ -12,13 +12,14 @@ import monix.execution.UncaughtExceptionReporter
 import scala.util.control.NonFatal
 
 private case class SocketServer(
-  to: InetSocketAddress,
-  reuseAddress: Boolean = true,
-  sendBufferSize: Int = 256 * 1024,
-  receiveBufferSize: Int = 256 * 1024,
-  keepAlive: Boolean = false,
-  noDelay: Boolean = false,
-  onOpenError: Throwable => Unit = _ => ()) {
+    to: InetSocketAddress,
+    reuseAddress: Boolean = true,
+    sendBufferSize: Int = 256 * 1024,
+    receiveBufferSize: Int = 256 * 1024,
+    keepAlive: Boolean = false,
+    noDelay: Boolean = false,
+    onOpenError: Throwable => Unit = _ => ()
+) {
 
   private[this] lazy val server: Either[Throwable, AsynchronousServerSocketChannel] = try {
     val ag = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool())
