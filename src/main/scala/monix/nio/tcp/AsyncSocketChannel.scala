@@ -21,50 +21,64 @@ import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.spi.AsynchronousChannelProvider
 import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousSocketChannel, CompletionHandler }
-import java.util.concurrent.{ Executors, TimeUnit }
+import java.util.concurrent.TimeUnit
 
 import monix.eval.Callback
-import monix.nio.AsyncChannel
+import monix.execution.Scheduler
+import monix.nio.internal.ExecutorServiceWrapper
 
 import scala.util.control.NonFatal
 
 abstract class AsyncSocketChannel extends AutoCloseable {
-
+  // TODO documentation and complete API
+  def socketAddress: InetSocketAddress
+  def closeWhenDone: Boolean
+  def close()
+  def connect(callback: Callback[Void])
+  def read(dst: ByteBuffer, callback: Callback[Int])
+  def write(src: ByteBuffer, callback: Callback[Int])
 }
 
 object AsyncSocketChannel {
+  // TODO documentation and complete API
 
-  private[tcp] final case class SocketClient(
+  def apply(to: InetSocketAddress, closeWhenDone: Boolean = true)(implicit s: Scheduler): AsyncSocketChannel = {
+    NewIOImplementation(to, closeWhenDone)
+  }
+
+  private final case class NewIOImplementation(
       to: InetSocketAddress,
+      closeWhenDone: Boolean,
       reuseAddress: Boolean = true,
       sendBufferSize: Int = 256 * 1024,
       receiveBufferSize: Int = 256 * 1024,
       keepAlive: Boolean = false,
-      noDelay: Boolean = false,
-      onOpenError: Throwable => Unit = _ => (),
-      closeWhenDone: Boolean = true
-  ) extends AsyncSocketChannel with AsyncChannel {
+      noDelay: Boolean = false
+  )(implicit s: Scheduler) extends AsyncSocketChannel {
 
-    private[this] lazy val asyncSocketChannel: Either[Throwable, AsynchronousSocketChannel] = try {
-      val ag = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool())
-      val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(ag)
-      ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
-      ch.setOption[Integer](StandardSocketOptions.SO_SNDBUF, sendBufferSize)
-      ch.setOption[Integer](StandardSocketOptions.SO_RCVBUF, receiveBufferSize)
-      ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_KEEPALIVE, keepAlive)
-      ch.setOption[java.lang.Boolean](StandardSocketOptions.TCP_NODELAY, noDelay)
-      Right(ch)
-    } catch {
-      case NonFatal(exc) => onOpenError(exc); Left(exc)
-    }
+    private[this] lazy val asyncSocketChannel: Either[Throwable, AsynchronousSocketChannel] =
+      try {
+        val ag = AsynchronousChannelGroup.withThreadPool(ExecutorServiceWrapper(s))
+        val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(ag)
+        ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
+        ch.setOption[Integer](StandardSocketOptions.SO_SNDBUF, sendBufferSize)
+        ch.setOption[Integer](StandardSocketOptions.SO_RCVBUF, receiveBufferSize)
+        ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_KEEPALIVE, keepAlive)
+        ch.setOption[java.lang.Boolean](StandardSocketOptions.TCP_NODELAY, noDelay)
+        Right(ch)
+      } catch {
+        case NonFatal(exc) =>
+          s.reportFailure(exc)
+          Left(exc)
+      }
 
-    override def closeOnComplete(): Boolean = closeWhenDone
+    override def socketAddress: InetSocketAddress = to
 
     override def close(): Unit = {
       asyncSocketChannel.fold(_ => (), c => c.close())
     }
 
-    def connect(callback: Callback[Void]): Unit = {
+    override def connect(callback: Callback[Void]): Unit = {
       val handler = new CompletionHandler[Void, Null] {
         override def completed(result: Void, attachment: Null) = {
           callback.onSuccess(result)
@@ -77,7 +91,7 @@ object AsyncSocketChannel {
       asyncSocketChannel.fold(_ => (), c => c.connect(to, null, handler))
     }
 
-    override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit = {
+    override def read(dst: ByteBuffer, callback: Callback[Int]): Unit = {
       val handler = new CompletionHandler[Integer, Null] {
         override def completed(result: Integer, attachment: Null) = {
           callback.onSuccess(result)
@@ -93,7 +107,7 @@ object AsyncSocketChannel {
       })
     }
 
-    override def write(src: ByteBuffer, position: Long, callback: Callback[Int]): Unit = {
+    override def write(src: ByteBuffer, callback: Callback[Int]): Unit = {
       val handler = new CompletionHandler[Integer, Null] {
         override def completed(result: Integer, attachment: Null) = {
           callback.onSuccess(result)
@@ -109,5 +123,4 @@ object AsyncSocketChannel {
       })
     }
   }
-
 }

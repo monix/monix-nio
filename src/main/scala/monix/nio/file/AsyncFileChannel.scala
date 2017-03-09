@@ -25,7 +25,7 @@ import java.nio.file.StandardOpenOption
 import monix.eval.{ Callback, Task }
 import monix.execution.{ Cancelable, Scheduler }
 import monix.nio.AsyncChannel
-import monix.nio.file.internal.ExecutorServiceWrapper
+import monix.nio.internal.ExecutorServiceWrapper
 
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.blocking
@@ -243,7 +243,7 @@ object AsyncFileChannel {
    *
    * @param s is the `Scheduler` used for asynchronous computations
    */
-  def apply(file: File, options: StandardOpenOption*)(implicit s: Scheduler): AsyncChannel = {
+  def apply(file: File, options: StandardOpenOption*)(implicit s: Scheduler): AsyncFileChannel = {
     import scala.collection.JavaConverters._
     new NewIOImplementation(
       AsynchronousFileChannel.open(
@@ -257,10 +257,18 @@ object AsyncFileChannel {
   /** Implementation for [[AsyncFileChannel]] that uses Java's NIO. */
   private final class NewIOImplementation(
       underlying: AsynchronousFileChannel
-  )(implicit scheduler: Scheduler) extends AsyncFileChannel with AsyncChannel {
+  )(implicit scheduler: Scheduler) extends AsyncFileChannel {
 
     override def isOpen: Boolean =
       underlying.isOpen
+
+    private[this] val cancelable: Cancelable =
+      Cancelable { () =>
+        try underlying.close()
+        catch { case NonFatal(ex) => scheduler.reportFailure(ex) }
+      }
+    override def close(): Unit =
+      cancelable.cancel()
 
     override def size(cb: Callback[Long]): Unit =
       scheduler.executeAsync { () =>
@@ -276,13 +284,7 @@ object AsyncFileChannel {
         }
       }
 
-    private[this] val cancelable: Cancelable =
-      Cancelable { () =>
-        try underlying.close()
-        catch { case NonFatal(ex) => scheduler.reportFailure(ex) }
-      }
-
-    def read(dst: ByteBuffer, position: Long, cb: Callback[Int]): Unit = {
+    override def read(dst: ByteBuffer, position: Long, cb: Callback[Int]): Unit = {
       require(position >= 0, "position >= 0")
       require(!dst.isReadOnly, "!dst.isReadOnly")
       try {
@@ -294,7 +296,7 @@ object AsyncFileChannel {
       }
     }
 
-    def write(src: ByteBuffer, position: Long, cb: Callback[Int]): Unit = {
+    override def write(src: ByteBuffer, position: Long, cb: Callback[Int]): Unit = {
       require(position >= 0, "position >= 0")
       try underlying.write(src, position, cb, completionHandler)
       catch { case NonFatal(ex) => cb.onError(ex) }
@@ -310,9 +312,6 @@ object AsyncFileChannel {
             cb.onError(ex)
         }
       }
-
-    override def close(): Unit =
-      cancelable.cancel()
 
     private[this] val completionHandler =
       new CompletionHandler[Integer, Callback[Int]] {

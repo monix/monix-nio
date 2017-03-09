@@ -14,7 +14,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
   test("connect to a TCP (HTTP) source successfully") {
     val p = Promise[Boolean]()
     val t = Task {
-      val tcpObservable = AsyncTcpClient.tcpReader("monix.io", 443)
+      val tcpObservable = readAsync("monix.io", 443)
       tcpObservable.subscribe(
         _ => Stop,
         err => p.failure(err)
@@ -38,7 +38,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }
 
-    val tcpConsumer = AsyncTcpClient.tcpWriter("monix.io", 443)
+    val tcpConsumer = writeAsync("monix.io", 443)
     Observable
       .fromIterable(data)
       .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
@@ -51,7 +51,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
   test("be able to make a HTTP GET request and pipe the response back") {
     val p = Promise[String]()
-    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
+    val asyncTcpClient = readWriteAsync("httpbin.org", 80)
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map {
@@ -84,7 +84,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
   test("be able to reuse the same socket and make multiple requests") {
     val p = Promise[String]()
-    val asyncTcpClient = AsyncTcpClient("httpbin.org", 80, t => p.failure(t))
+    val asyncTcpClient = readWriteAsync("httpbin.org", 80)
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>

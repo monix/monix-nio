@@ -15,12 +15,14 @@
  * limitations under the License.
  */
 
-package monix.nio.file.internal
+package monix.nio.internal
 
 import java.util
 import java.util.concurrent.{ AbstractExecutorService, ExecutorService, TimeUnit }
+
 import monix.execution.schedulers.{ ReferenceScheduler, SchedulerService }
 import monix.execution.{ Cancelable, ExecutionModel, Scheduler }
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContextExecutorService }
@@ -31,7 +33,7 @@ import scala.concurrent.{ Await, ExecutionContextExecutorService }
  * Can work with Monix's `SchedulerService` in order to provide
  * `shutdown` operations, however this is optional.
  */
-private[file] final class ExecutorServiceWrapper(scheduler: Scheduler)
+private[nio] final class ExecutorServiceWrapper(scheduler: Scheduler)
     extends AbstractExecutorService with ExecutionContextExecutorService {
 
   override def execute(runnable: Runnable): Unit =
@@ -73,7 +75,7 @@ private[file] final class ExecutorServiceWrapper(scheduler: Scheduler)
   }
 }
 
-private[file] object ExecutorServiceWrapper {
+private[nio] object ExecutorServiceWrapper {
   /** Builds an [[ExecutorServiceWrapper]] instance. */
   def apply(s: Scheduler): ExecutorService =
     new ExecutorServiceWrapper(s)

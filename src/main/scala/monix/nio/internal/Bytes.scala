@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package monix.nio
+package monix.nio.internal
 
 import java.nio.ByteBuffer
 

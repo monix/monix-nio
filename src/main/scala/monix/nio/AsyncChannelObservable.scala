@@ -25,19 +25,17 @@ import monix.execution.{ Cancelable, UncaughtExceptionReporter }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignmentCancelable
 import monix.execution.exceptions.APIContractViolationException
+import monix.nio.internal.{ Bytes, EmptyBytes, NonEmptyBytes }
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-private[nio] abstract class AsyncChannelObservable[T <: AsyncChannel] extends Observable[Array[Byte]] {
-
-  protected def bufferSize: Int
-
-  protected def channel: Option[T]
-
-  protected def init(subscriber: Subscriber[Array[Byte]]): Future[Unit] =
+private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte]] {
+  def bufferSize: Int
+  def channel: Option[AsyncChannel]
+  def init(subscriber: Subscriber[Array[Byte]]): Future[Unit] =
     Future.successful(())
 
   private[this] val wasSubscribed = Atomic(false)
@@ -118,7 +116,7 @@ private[nio] abstract class AsyncChannelObservable[T <: AsyncChannel] extends Ob
   }
 
   private[this] val channelOpen = Atomic(true)
-  protected def closeChannel()(implicit reporter: UncaughtExceptionReporter) =
+  private[nio] final def closeChannel()(implicit reporter: UncaughtExceptionReporter) =
     try {
       val open = channelOpen.getAndSet(false)
       if (open) channel.foreach(_.close())

@@ -22,10 +22,9 @@ import java.nio.ByteBuffer
 import monix.eval.Callback
 
 private[nio] trait AsyncChannel extends AutoCloseable {
+
   def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit
-
   def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit
-
   def close(): Unit
-  def closeOnComplete(): Boolean = true
+  def closeOnComplete(): Boolean
 }

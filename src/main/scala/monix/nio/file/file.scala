@@ -17,8 +17,10 @@
 
 package monix.nio
 
+import java.nio.ByteBuffer
 import java.nio.file.{ Path, StandardOpenOption }
 
+import monix.eval.Callback
 import monix.execution.Scheduler
 
 package object file {
@@ -43,8 +45,21 @@ package object file {
     flags: Seq[StandardOpenOption] = Seq.empty
   )(implicit s: Scheduler): AsyncFileWriterConsumer = {
 
-    val flagsWithWriteOptions = flags :+ StandardOpenOption.CREATE :+ StandardOpenOption.WRITE
+    val flagsWithWriteOptions = flags :+ StandardOpenOption.WRITE :+ StandardOpenOption.CREATE
     val channel = AsyncFileChannel(path.toFile, flagsWithWriteOptions: _*)
     new AsyncFileWriterConsumer(channel, startPosition)
+  }
+
+  private[file] def asyncChannelWrapper(asyncFileChannel: AsyncFileChannel) = new AsyncChannel {
+    override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
+      asyncFileChannel.read(dst, position, callback)
+
+    override def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
+      asyncFileChannel.write(b, position, callback)
+
+    override def close(): Unit =
+      asyncFileChannel.close()
+
+    override def closeOnComplete(): Boolean = true
   }
 }

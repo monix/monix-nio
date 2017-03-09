@@ -38,6 +38,8 @@ class FileChannelForTesting(
   /** Returns `true` if this channel is open, or `false` otherwise. */
   override def isOpen: Boolean = !isClosed
 
+  override def closeOnComplete(): Boolean = true
+
   override def flush(writeMetaData: Boolean, cb: Callback[Unit]): Unit = ???
 
   def isClosed = channelClosed.get
