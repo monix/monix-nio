@@ -18,42 +18,33 @@
 package monix.nio
 
 import java.nio.file.{ Path, StandardOpenOption }
-import java.util.concurrent.ExecutorService
 
-import monix.nio.file.internal.AsyncFileChannel
+import monix.execution.Scheduler
 
 package object file {
-  def readAsync(
-    path: Path,
-    chunkSize: Int,
-    executorService: Option[ExecutorService] = None,
-    onOpenError: Throwable => Unit = _ => ()
-  ): AsyncFileReaderObservable = {
-
+  def readAsync(path: Path, chunkSize: Int)(implicit s: Scheduler): AsyncFileReaderObservable = {
     require(chunkSize > 1)
-    val channel = AsyncFileChannel.openRead(path, Set.empty, executorService, onOpenError)
+
+    val channel = AsyncFileChannel(path.toFile, StandardOpenOption.READ)
     new AsyncFileReaderObservable(channel, chunkSize)
   }
 
   def writeAsync(
     path: Path,
-    flags: Seq[StandardOpenOption] = Seq.empty,
-    executorService: Option[ExecutorService] = None,
-    onOpenError: Throwable => Unit = _ => ()
-  ): AsyncFileWriterConsumer = {
+    flags: Seq[StandardOpenOption] = Seq.empty
+  )(implicit s: Scheduler): AsyncFileWriterConsumer = {
 
-    appendAsync(path, 0, flags, executorService, onOpenError)
+    appendAsync(path, 0, flags)
   }
 
   def appendAsync(
     path: Path,
     startPosition: Long,
-    flags: Seq[StandardOpenOption] = Seq.empty,
-    executorService: Option[ExecutorService] = None,
-    onOpenError: Throwable => Unit = _ => ()
-  ): AsyncFileWriterConsumer = {
+    flags: Seq[StandardOpenOption] = Seq.empty
+  )(implicit s: Scheduler): AsyncFileWriterConsumer = {
 
-    val channel = AsyncFileChannel.openWrite(path, flags.toSet, executorService, onOpenError)
+    val flagsWithWriteOptions = flags :+ StandardOpenOption.CREATE :+ StandardOpenOption.WRITE
+    val channel = AsyncFileChannel(path.toFile, flagsWithWriteOptions: _*)
     new AsyncFileWriterConsumer(channel, startPosition)
   }
 }

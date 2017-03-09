@@ -24,6 +24,7 @@ import java.nio.file.StandardOpenOption
 
 import monix.eval.{ Callback, Task }
 import monix.execution.{ Cancelable, Scheduler }
+import monix.nio.AsyncChannel
 import monix.nio.file.internal.ExecutorServiceWrapper
 
 import scala.concurrent.{ Future, Promise }
@@ -242,7 +243,7 @@ object AsyncFileChannel {
    *
    * @param s is the `Scheduler` used for asynchronous computations
    */
-  def apply(file: File, options: StandardOpenOption*)(implicit s: Scheduler): AsyncFileChannel = {
+  def apply(file: File, options: StandardOpenOption*)(implicit s: Scheduler): AsyncChannel = {
     import scala.collection.JavaConverters._
     new NewIOImplementation(
       AsynchronousFileChannel.open(
@@ -254,7 +255,9 @@ object AsyncFileChannel {
   }
 
   /** Implementation for [[AsyncFileChannel]] that uses Java's NIO. */
-  private final class NewIOImplementation(underlying: AsynchronousFileChannel)(implicit scheduler: Scheduler) extends AsyncFileChannel {
+  private final class NewIOImplementation(
+      underlying: AsynchronousFileChannel
+  )(implicit scheduler: Scheduler) extends AsyncFileChannel with AsyncChannel {
 
     override def isOpen: Boolean =
       underlying.isOpen

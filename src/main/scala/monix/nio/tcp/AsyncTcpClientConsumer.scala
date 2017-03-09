@@ -21,6 +21,7 @@ import java.net.InetSocketAddress
 
 import monix.eval.Callback
 import monix.nio.AsyncChannelConsumer
+import monix.nio.tcp.AsyncSocketChannel.SocketClient
 
 import scala.concurrent.Promise
 import scala.util.control.NonFatal

@@ -15,18 +15,20 @@
  * limitations under the License.
  */
 
-package monix.nio
+package monix.nio.file
 
 import java.nio.file.{ Files, Paths }
 import java.util
-import monix.eval.Callback
-import monix.nio.text.UTF8Codec.{ utf8Decode, utf8Encode }
-import monix.execution.Scheduler.Implicits.{ global => ctx }
-import monix.reactive.Observable
-import file._
+
 import minitest.SimpleTestSuite
-import scala.concurrent.{ Await, Promise }
+import monix.eval.Callback
+import monix.execution.Scheduler.Implicits.{ global => ctx }
+import monix.nio.file
+import monix.nio.text.UTF8Codec.{ utf8Decode, utf8Encode }
+import monix.reactive.Observable
+
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
 
 object CodecTest extends SimpleTestSuite {
   test("decode file utf8") {

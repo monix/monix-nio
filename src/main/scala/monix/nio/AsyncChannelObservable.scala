@@ -25,14 +25,13 @@ import monix.execution.{ Cancelable, UncaughtExceptionReporter }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignmentCancelable
 import monix.execution.exceptions.APIContractViolationException
-import monix.nio.cancelables.SingleFunctionCallCancelable
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-abstract protected[nio] class AsyncChannelObservable[T <: AsyncMonixChannel] extends Observable[Array[Byte]] {
+private[nio] abstract class AsyncChannelObservable[T <: AsyncChannel] extends Observable[Array[Byte]] {
 
   protected def bufferSize: Int
 
@@ -75,11 +74,11 @@ abstract protected[nio] class AsyncChannelObservable[T <: AsyncMonixChannel] ext
       .executeWithOptions(_.enableAutoCancelableRunLoops)
       .runAsync(taskCallback)
 
-    val singleFunctionCallCancelable = SingleFunctionCallCancelable(() => {
+    val extraCancelable = Cancelable(() => {
       cancelable.cancel()
       closeChannel()
     })
-    SingleAssignmentCancelable.plusOne(singleFunctionCallCancelable)
+    SingleAssignmentCancelable.plusOne(extraCancelable)
   }
 
   private def createReadTask(buff: ByteBuffer, position: Long) =

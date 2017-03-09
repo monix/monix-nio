@@ -21,17 +21,16 @@ import java.nio.ByteBuffer
 
 import monix.eval.Callback
 import monix.execution.Ack.{ Continue, Stop }
-import monix.execution.{ Ack, Scheduler, UncaughtExceptionReporter }
+import monix.execution.{ Ack, Cancelable, Scheduler, UncaughtExceptionReporter }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.{ AssignableCancelable, SingleAssignmentCancelable }
-import monix.nio.cancelables.SingleFunctionCallCancelable
 import monix.reactive.Consumer
 import monix.reactive.observers.Subscriber
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
-abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Array[Byte], Long] {
+private[nio] abstract class AsyncChannelConsumer[T <: AsyncChannel] extends Consumer[Array[Byte], Long] {
   protected def channel: Option[T]
   protected def withInitialPosition: Long = 0l
   def init(subscriber: AsyncChannelSubscriber): Future[Unit] = Future.successful(())
@@ -78,7 +77,7 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
     }
 
     override def onComplete(): Unit = {
-      channel.collect { case sc if sc.closeOnComplete => closeChannel() }
+      channel.collect { case sc if sc.closeOnComplete() => closeChannel() }
       if (callbackCalled.compareAndSet(expect = false, update = true))
         consumerCallback.onSuccess(position)
     }
@@ -90,7 +89,7 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
 
     protected[nio] def onCancel(): Unit = {
       callbackCalled.set(true) // the callback should not be called after cancel
-      channel.collect { case sc if sc.closeOnComplete => closeChannel() }
+      channel.collect { case sc if sc.closeOnComplete() => closeChannel() }
     }
 
     protected[nio] def sendError(t: Throwable) = if (callbackCalled.compareAndSet(expect = false, update = true))
@@ -110,8 +109,8 @@ abstract class AsyncChannelConsumer[T <: AsyncMonixChannel] extends Consumer[Arr
   override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
     val out = new AsyncChannelSubscriber(cb)(s)
 
-    val cancelable = SingleFunctionCallCancelable(() => out.onCancel())
-    val conn = SingleAssignmentCancelable.plusOne(cancelable)
+    val extraCancelable = Cancelable(() => out.onCancel())
+    val conn = SingleAssignmentCancelable.plusOne(extraCancelable)
     (out, conn)
   }
 }

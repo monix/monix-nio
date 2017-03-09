@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package monix.nio
+package monix.nio.file
 
 import java.nio.file.{ Files, Paths }
 
@@ -23,7 +23,6 @@ import minitest.TestSuite
 import monix.eval.Callback
 import monix.execution.atomic.Atomic
 import monix.execution.schedulers.TestScheduler
-import monix.nio.file.{ AsyncFileReaderObservable, AsyncFileWriterConsumer }
 
 object ChannelHandlingTest extends TestSuite[TestScheduler] {
   def setup(): TestScheduler = TestScheduler()
@@ -42,10 +41,10 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     val chunkSize = 2
     val readBytes = Files.readAllBytes(from).grouped(chunkSize).toVector
-    val readChannel = new MonixFileChannelForTesting(readBytes, null)
+    val readChannel = new FileChannelForTesting(readBytes, null)
 
     val writeTo = Atomic(Vector.empty[Array[Byte]])
-    val writeChannel = new MonixFileChannelForTesting(null, writeTo)
+    val writeChannel = new FileChannelForTesting(null, writeTo)
 
     val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
     val consumer = new AsyncFileWriterConsumer(writeChannel)
@@ -63,10 +62,10 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     val chunkSize = 17
     val readBytes = Files.readAllBytes(from).take(20).grouped(chunkSize).toVector
-    val readChannel = new MonixFileChannelForTesting(readBytes, null)
+    val readChannel = new FileChannelForTesting(readBytes, null)
 
     val writeTo = Atomic(Vector.empty[Array[Byte]])
-    val writeChannel = new MonixFileChannelForTesting(null, writeTo)
+    val writeChannel = new FileChannelForTesting(null, writeTo)
 
     val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
     val consumer = new AsyncFileWriterConsumer(writeChannel)
@@ -105,10 +104,10 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     val chunkSize = 3
     val readBytes = Files.readAllBytes(from).take(20).grouped(chunkSize).toVector
-    val readChannel = new MonixFileChannelForTesting(readBytes, null)
+    val readChannel = new FileChannelForTesting(readBytes, null)
 
     val writeTo = Atomic(Vector.empty[Array[Byte]])
-    val writeChannel = new MonixFileChannelForTesting(null, writeTo)
+    val writeChannel = new FileChannelForTesting(null, writeTo)
 
     val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
     val consumer = new AsyncFileWriterConsumer(writeChannel)
@@ -146,10 +145,10 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     val chunkSize = 3
     val readBytes = Files.readAllBytes(from).take(20).grouped(chunkSize).toVector
-    val readChannel = new MonixFileChannelForTesting(readBytes, null)
+    val readChannel = new FileChannelForTesting(readBytes, null)
 
     val writeTo = Atomic(Vector.empty[Array[Byte]])
-    val writeChannel = new MonixFileChannelForTesting(null, writeTo)
+    val writeChannel = new FileChannelForTesting(null, writeTo)
 
     val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
     val consumer = new AsyncFileWriterConsumer(writeChannel)

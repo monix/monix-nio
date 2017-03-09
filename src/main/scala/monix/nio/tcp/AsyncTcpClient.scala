@@ -18,6 +18,7 @@
 package monix.nio.tcp
 
 import monix.eval.{ Callback, Task }
+import monix.nio.tcp.AsyncSocketChannel.SocketClient
 
 import scala.util.control.NonFatal
 
