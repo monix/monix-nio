@@ -25,7 +25,7 @@ import monix.nio.AsyncChannelConsumer
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
-final class AsyncTcpClientConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer {
+final class AsyncSocketChannelConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer {
   private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
 
   private[tcp] def this(asc: AsyncSocketChannel) {

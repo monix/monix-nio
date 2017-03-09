@@ -46,8 +46,8 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val writeTo = Atomic(Vector.empty[Array[Byte]])
     val writeChannel = new FileChannelForTesting(null, writeTo)
 
-    val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
-    val consumer = new AsyncFileWriterConsumer(writeChannel)
+    val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
+    val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     reader.consumeWith(consumer).runAsync
     s.tick()
@@ -67,8 +67,8 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val writeTo = Atomic(Vector.empty[Array[Byte]])
     val writeChannel = new FileChannelForTesting(null, writeTo)
 
-    val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
-    val consumer = new AsyncFileWriterConsumer(writeChannel)
+    val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
+    val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     val cancelable = reader.consumeWith(consumer).runAsync
 
@@ -109,8 +109,8 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val writeTo = Atomic(Vector.empty[Array[Byte]])
     val writeChannel = new FileChannelForTesting(null, writeTo)
 
-    val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
-    val consumer = new AsyncFileWriterConsumer(writeChannel)
+    val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
+    val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     val callbackErrorCalled = Atomic(false)
     val callback = new Callback[Long] {
@@ -150,8 +150,8 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val writeTo = Atomic(Vector.empty[Array[Byte]])
     val writeChannel = new FileChannelForTesting(null, writeTo)
 
-    val reader = new AsyncFileReaderObservable(readChannel, chunkSize)
-    val consumer = new AsyncFileWriterConsumer(writeChannel)
+    val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
+    val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     val callbackErrorCalled = Atomic(false)
     val callback = new Callback[Long] {

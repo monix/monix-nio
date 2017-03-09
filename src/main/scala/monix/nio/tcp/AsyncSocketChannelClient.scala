@@ -22,7 +22,7 @@ import monix.execution.Scheduler
 
 import scala.util.control.NonFatal
 
-final case class AsyncTcpClient(
+final case class AsyncSocketChannelClient(
     host: String,
     port: Int,
     bufferSize: Int
@@ -44,9 +44,9 @@ final case class AsyncTcpClient(
   }
 
   private[this] lazy val asyncTcpClientObservable =
-    new AsyncTcpClientObservable(underlyingAsyncSocketClient, bufferSize)
+    new AsyncSocketChannelObservable(underlyingAsyncSocketClient, bufferSize)
   private[this] lazy val asyncTcpClientConsumer =
-    new AsyncTcpClientConsumer(underlyingAsyncSocketClient)
+    new AsyncSocketChannelConsumer(underlyingAsyncSocketClient)
 
   try {
     underlyingAsyncSocketClient.connect(connectCallback)
@@ -58,18 +58,18 @@ final case class AsyncTcpClient(
   /**
    * The TCP client reader.
    * It is the one responsible to close the connection
-   * when used together with a writer ([[monix.nio.tcp.AsyncTcpClientConsumer]]),
+   * when used together with a writer ([[monix.nio.tcp.AsyncSocketChannelConsumer]]),
    * by using a [[monix.reactive.observers.Subscriber]]
    * and signal [[monix.execution.Ack.Stop]] or cancel it
    */
-  def tcpObservable: Task[AsyncTcpClientObservable] = Task.fromFuture {
+  def tcpObservable: Task[AsyncSocketChannelObservable] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientObservable)
   }
 
   /**
    * The TCP client writer
    */
-  def tcpConsumer: Task[AsyncTcpClientConsumer] = Task.fromFuture {
+  def tcpConsumer: Task[AsyncSocketChannelConsumer] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientConsumer)
   }
 }

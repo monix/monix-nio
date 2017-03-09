@@ -17,14 +17,14 @@
 
 package monix.nio.file
 
-import monix.nio.AsyncChannelConsumer
+import monix.nio.AsyncChannelObservable
 
-final class AsyncFileWriterConsumer(
+final class AsyncFileChannelObservable(
     asyncFileChannel: AsyncFileChannel,
-    startPosition: Long = 0
-) extends AsyncChannelConsumer {
+    size: Int
+) extends AsyncChannelObservable {
 
-  override def withInitialPosition = startPosition
+  override def bufferSize = size
   override def channel = Option {
     asyncChannelWrapper(asyncFileChannel)
   }

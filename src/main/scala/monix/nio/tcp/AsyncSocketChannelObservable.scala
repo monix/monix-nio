@@ -25,7 +25,7 @@ import monix.reactive.observers.Subscriber
 
 import scala.concurrent.Promise
 
-final class AsyncTcpClientObservable private[tcp] (
+final class AsyncSocketChannelObservable private[tcp] (
     host: String, port: Int,
     buffSize: Int = 256 * 1024
 ) extends AsyncChannelObservable {

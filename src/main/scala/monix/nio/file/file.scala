@@ -24,17 +24,17 @@ import monix.eval.Callback
 import monix.execution.Scheduler
 
 package object file {
-  def readAsync(path: Path, chunkSize: Int)(implicit s: Scheduler): AsyncFileReaderObservable = {
+  def readAsync(path: Path, chunkSize: Int)(implicit s: Scheduler): AsyncFileChannelObservable = {
     require(chunkSize > 1)
 
     val channel = AsyncFileChannel(path.toFile, StandardOpenOption.READ)
-    new AsyncFileReaderObservable(channel, chunkSize)
+    new AsyncFileChannelObservable(channel, chunkSize)
   }
 
   def writeAsync(
     path: Path,
     flags: Seq[StandardOpenOption] = Seq.empty
-  )(implicit s: Scheduler): AsyncFileWriterConsumer = {
+  )(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
     appendAsync(path, 0, flags)
   }
@@ -43,11 +43,11 @@ package object file {
     path: Path,
     startPosition: Long,
     flags: Seq[StandardOpenOption] = Seq.empty
-  )(implicit s: Scheduler): AsyncFileWriterConsumer = {
+  )(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
     val flagsWithWriteOptions = flags :+ StandardOpenOption.WRITE :+ StandardOpenOption.CREATE
     val channel = AsyncFileChannel(path.toFile, flagsWithWriteOptions: _*)
-    new AsyncFileWriterConsumer(channel, startPosition)
+    new AsyncFileChannelConsumer(channel, startPosition)
   }
 
   private[file] def asyncChannelWrapper(asyncFileChannel: AsyncFileChannel) = new AsyncChannel {

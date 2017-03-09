@@ -24,16 +24,16 @@ import monix.execution.Scheduler
 
 package object tcp {
   def readAsync(host: String, port: Int, bufferSize: Int = 256 * 1024) =
-    new AsyncTcpClientObservable(host, port, bufferSize)
+    new AsyncSocketChannelObservable(host, port, bufferSize)
 
   def writeAsync(host: String, port: Int) =
-    new AsyncTcpClientConsumer(host, port)
+    new AsyncSocketChannelConsumer(host, port)
 
   def readWriteAsync(
     host: String,
     port: Int,
     bufferSize: Int = 256 * 1024
-  )(implicit scheduler: Scheduler): AsyncTcpClient = AsyncTcpClient(host, port, bufferSize)
+  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = AsyncSocketChannelClient(host, port, bufferSize)
 
   private[tcp] def asyncChannelWrapper(asyncSocketChannel: AsyncSocketChannel) = new AsyncChannel {
     override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
