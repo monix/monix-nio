@@ -33,13 +33,7 @@ package object tcp {
     host: String,
     port: Int,
     bufferSize: Int = 256 * 1024
-  )(implicit scheduler: Scheduler): AsyncTcpClient = {
-
-    val asyncTcpClient = AsyncTcpClient(host, port, bufferSize)
-    asyncTcpClient.init()
-
-    asyncTcpClient
-  }
+  )(implicit scheduler: Scheduler): AsyncTcpClient = AsyncTcpClient(host, port, bufferSize)
 
   private[tcp] def asyncChannelWrapper(asyncSocketChannel: AsyncSocketChannel) = new AsyncChannel {
     override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =

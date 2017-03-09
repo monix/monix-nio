@@ -48,6 +48,13 @@ final case class AsyncTcpClient(
   private[this] lazy val asyncTcpClientConsumer =
     new AsyncTcpClientConsumer(underlyingAsyncSocketClient)
 
+  try {
+    underlyingAsyncSocketClient.connect(connectCallback)
+  } catch {
+    case NonFatal(ex) =>
+      scheduler.reportFailure(ex)
+  }
+
   /**
    * The TCP client reader.
    * It is the one responsible to close the connection
@@ -65,12 +72,4 @@ final case class AsyncTcpClient(
   def tcpConsumer: Task[AsyncTcpClientConsumer] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientConsumer)
   }
-
-  private[tcp] def init(): Unit =
-    try {
-      underlyingAsyncSocketClient.connect(connectCallback)
-    } catch {
-      case NonFatal(ex) =>
-        scheduler.reportFailure(ex)
-    }
 }
