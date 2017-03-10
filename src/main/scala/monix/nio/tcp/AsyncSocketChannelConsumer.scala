@@ -35,13 +35,15 @@ import scala.concurrent.Promise
  */
 final class AsyncSocketChannelConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer {
   private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
+  private[this] var closeOnComplete = true
 
-  private[tcp] def this(asc: AsyncSocketChannel) {
+  private[tcp] def this(asc: AsyncSocketChannel, closeWhenDone: Boolean) {
     this("", 0)
     this.asyncSocketChannel = Option(asc)
+    this.closeOnComplete = closeWhenDone
   }
 
-  override def channel = asyncSocketChannel.map(asc => asyncChannelWrapper(asc, closeWhenDone = true))
+  override lazy val channel = asyncSocketChannel.map(asc => asyncChannelWrapper(asc, closeOnComplete))
 
   override def init(subscriber: AsyncChannelSubscriber) = {
     import subscriber.scheduler

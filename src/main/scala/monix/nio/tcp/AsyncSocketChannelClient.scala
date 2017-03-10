@@ -25,7 +25,8 @@ import monix.execution.Scheduler
  * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
  * that both are using the same underlying socket.
  * The reader will be the one in charge of closing the underlying socket by
- * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly
+ * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly.
+ * In case `end-of-stream` is received the socket is closed automatically.
  *
  * @param host hostname
  * @param port TCP port number
@@ -43,7 +44,7 @@ final case class AsyncSocketChannelClient(
   private[this] lazy val asyncTcpClientObservable =
     new AsyncSocketChannelObservable(underlyingAsyncSocketClient, bufferSize)
   private[this] lazy val asyncTcpClientConsumer =
-    new AsyncSocketChannelConsumer(underlyingAsyncSocketClient)
+    new AsyncSocketChannelConsumer(underlyingAsyncSocketClient, closeWhenDone = false)
 
   private[this] val connectedSignal = scala.concurrent.Promise[Unit]()
   private[this] val connectCallback = new Callback[Unit]() {
@@ -58,18 +59,19 @@ final case class AsyncSocketChannelClient(
   underlyingAsyncSocketClient.connect(new java.net.InetSocketAddress(host, port), connectCallback)
 
   /**
-   * The TCP client reader.
-   * It is the one responsible for closing the connection
-   * when used together with a writer ([[monix.nio.tcp.AsyncSocketChannelConsumer]]),
-   * by using a [[monix.reactive.observers.Subscriber]]
-   * and signal [[monix.execution.Ack.Stop]] or cancel it
+   * Returns the underlying TCP client reader.
+   * It is the one in charge of closing the underlying socket by
+   * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly,
+   * if no `end-of-stream` is received
+   * See [[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]]
    */
   def tcpObservable: Task[AsyncSocketChannelObservable] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientObservable)
   }
 
   /**
-   * The TCP client writer
+   * Returns the underlying TCP client writer.
+   * See [[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]
    */
   def tcpConsumer: Task[AsyncSocketChannelConsumer] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientConsumer)

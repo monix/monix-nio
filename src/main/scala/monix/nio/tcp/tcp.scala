@@ -57,7 +57,8 @@ package object tcp {
    * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
    * that both are using the same underlying socket.
    * The reader will be the one in charge of closing the underlying socket by
-   * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly
+   * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly,
+   * if no `end-of-stream` is received
    *
    * @param host hostname
    * @param port TCP port number

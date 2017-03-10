@@ -28,7 +28,7 @@ import scala.concurrent.Promise
 /**
  * A TCP socket [[monix.reactive.Observable Observable]] that can be subscribed to
  * in order to read the incoming bytes asynchronously.
- * It will close the socket on end-of-stream, signalling [[monix.execution.Ack.Stop]]
+ * The underlying socket is closed on `end-of-stream`, on signalling [[monix.execution.Ack.Stop Stop]]
  * after subscription or by cancelling it directly
  *
  * @param host hostname
@@ -48,7 +48,7 @@ final class AsyncSocketChannelObservable private[tcp] (
     this.asyncSocketChannel = Option(asc)
   }
 
-  override def channel = asyncSocketChannel.map(asc => asyncChannelWrapper(asc, closeWhenDone = true))
+  override lazy val channel = asyncSocketChannel.map(asc => asyncChannelWrapper(asc, closeWhenDone = true))
 
   override def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler
