@@ -11,23 +11,30 @@ import scala.concurrent.{ Await, Promise }
 object TcpIntegrationSpec extends SimpleTestSuite {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
 
-  test("connect to a TCP (HTTP) source successfully") {
+  /* TODO uncomment and test with a server when it's implemented
+  test("connect and read from a TCP source successfully") {
     val p = Promise[Boolean]()
     val t = Task {
-      val tcpObservable = readAsync("monix.io", 443)
+      val tcpObservable = readAsync("localhost", 9000, 2) // echo monix | nc -l 9000
       tcpObservable.subscribe(
-        _ => Stop,
-        err => p.failure(err)
+        (bytes: Array[Byte]) => {
+          val chunk = new String(bytes, "UTF-8")
+          if (chunk.endsWith("\n")) {
+            p.success(true)
+            Stop
+          } else
+            Continue
+        },
+        err => p.failure(err),
+        () => p.success(true)
       )
-    }.map { c =>
-      c.cancel()
-      p.success(true)
     }
     t.runAsync
-
     assert(Await.result(p.future, 5.seconds))
   }
+  */
 
+  // TODO test with a server when it's implemented
   test("write to a TCP (HTTP) connection successfully") {
     val data = Array.fill(8)("monix".getBytes())
     val chunkSize = 2 // very small chunks for testing

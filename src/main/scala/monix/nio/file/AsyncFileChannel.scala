@@ -24,7 +24,6 @@ import java.nio.file.StandardOpenOption
 
 import monix.eval.{ Callback, Task }
 import monix.execution.{ Cancelable, Scheduler }
-import monix.nio.AsyncChannel
 import monix.nio.internal.ExecutorServiceWrapper
 
 import scala.concurrent.{ Future, Promise }
@@ -131,7 +130,7 @@ abstract class AsyncFileChannel extends AutoCloseable {
    *
    * @param dst $readDestDesc
    * @param position $readPositionDesc
-   * @param cb $callbackDesc. For this method it signals $readReturnDesc
+   * @param cb $callbackDesc . For this method it signals $readReturnDesc
    */
   def read(dst: ByteBuffer, position: Long, cb: Callback[Int]): Unit
 
@@ -168,7 +167,7 @@ abstract class AsyncFileChannel extends AutoCloseable {
    *
    * @param src $writeSrcDesc
    * @param position $writePositionDesc
-   * @param cb $callbackDesc. For this method it signals $writeReturnDesc
+   * @param cb $callbackDesc . For this method it signals $writeReturnDesc
    */
   def write(src: ByteBuffer, position: Long, cb: Callback[Int]): Unit
 

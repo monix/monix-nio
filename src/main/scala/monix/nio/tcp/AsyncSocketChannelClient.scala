@@ -20,21 +20,34 @@ package monix.nio.tcp
 import monix.eval.{ Callback, Task }
 import monix.execution.Scheduler
 
-import scala.util.control.NonFatal
-
+/**
+ * A TCP client composed of an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
+ * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
+ * that both are using the same underlying socket.
+ * The reader will be the one in charge of closing the underlying socket by
+ * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly
+ *
+ * @param host hostname
+ * @param port TCP port number
+ * @param bufferSize the size of the buffer used for reading
+ *
+ * @return an [[monix.nio.tcp.AsyncSocketChannelClient AsyncSocketChannelClient]]
+ */
 final case class AsyncSocketChannelClient(
     host: String,
     port: Int,
     bufferSize: Int
 )(implicit scheduler: Scheduler) {
+  private[this] val underlyingAsyncSocketClient = AsyncSocketChannel()
 
-  private[this] val underlyingAsyncSocketClient = AsyncSocketChannel(
-    new java.net.InetSocketAddress(host, port),
-    closeWhenDone = false
-  )
+  private[this] lazy val asyncTcpClientObservable =
+    new AsyncSocketChannelObservable(underlyingAsyncSocketClient, bufferSize)
+  private[this] lazy val asyncTcpClientConsumer =
+    new AsyncSocketChannelConsumer(underlyingAsyncSocketClient)
+
   private[this] val connectedSignal = scala.concurrent.Promise[Unit]()
-  private[this] val connectCallback = new Callback[Void]() {
-    override def onSuccess(value: Void): Unit = {
+  private[this] val connectCallback = new Callback[Unit]() {
+    override def onSuccess(value: Unit): Unit = {
       connectedSignal.success(())
     }
     override def onError(ex: Throwable): Unit = {
@@ -42,18 +55,7 @@ final case class AsyncSocketChannelClient(
       scheduler.reportFailure(ex)
     }
   }
-
-  private[this] lazy val asyncTcpClientObservable =
-    new AsyncSocketChannelObservable(underlyingAsyncSocketClient, bufferSize)
-  private[this] lazy val asyncTcpClientConsumer =
-    new AsyncSocketChannelConsumer(underlyingAsyncSocketClient)
-
-  try {
-    underlyingAsyncSocketClient.connect(connectCallback)
-  } catch {
-    case NonFatal(ex) =>
-      scheduler.reportFailure(ex)
-  }
+  underlyingAsyncSocketClient.connect(new java.net.InetSocketAddress(host, port), connectCallback)
 
   /**
    * The TCP client reader.

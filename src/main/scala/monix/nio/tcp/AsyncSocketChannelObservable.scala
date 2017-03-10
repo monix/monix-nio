@@ -25,31 +25,39 @@ import monix.reactive.observers.Subscriber
 
 import scala.concurrent.Promise
 
+/**
+ * A TCP socket [[monix.reactive.Observable Observable]] that can be subscribed to
+ * in order to read the incoming bytes asynchronously.
+ * It will close the socket on end-of-stream, signalling [[monix.execution.Ack.Stop]]
+ * after subscription or by cancelling it directly
+ *
+ * @param host hostname
+ * @param port TCP port number
+ * @param bufferSize the size of the buffer used for reading
+ */
 final class AsyncSocketChannelObservable private[tcp] (
     host: String, port: Int,
-    buffSize: Int = 256 * 1024
+    override val bufferSize: Int = 256 * 1024
 ) extends AsyncChannelObservable {
-
-  override def bufferSize = buffSize
 
   private[this] val connectedSignal = Promise[Unit]()
   private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
 
   private[tcp] def this(asc: AsyncSocketChannel, buffSize: Int) {
-    this(asc.socketAddress.getHostString, asc.socketAddress.getPort, buffSize)
+    this("", 0, buffSize)
     this.asyncSocketChannel = Option(asc)
   }
 
-  override def channel = asyncSocketChannel.map(asyncChannelWrapper)
+  override def channel = asyncSocketChannel.map(asc => asyncChannelWrapper(asc, closeWhenDone = true))
 
   override def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler
+
     if (asyncSocketChannel.isDefined) {
       connectedSignal.success(())
     } else {
-      asyncSocketChannel = Option(AsyncSocketChannel(new InetSocketAddress(host, port)))
-      val connectCallback = new Callback[Void]() {
-        override def onSuccess(value: Void): Unit = {
+      val connectCallback = new Callback[Unit]() {
+        override def onSuccess(value: Unit): Unit = {
           connectedSignal.success(())
         }
         override def onError(ex: Throwable): Unit = {
@@ -58,8 +66,8 @@ final class AsyncSocketChannelObservable private[tcp] (
           subscriber.onError(ex)
         }
       }
-
-      asyncSocketChannel.foreach(_.connect(connectCallback))
+      asyncSocketChannel = Option(AsyncSocketChannel())
+      asyncSocketChannel.foreach(_.connect(new InetSocketAddress(host, port), connectCallback))
     }
 
     connectedSignal.future

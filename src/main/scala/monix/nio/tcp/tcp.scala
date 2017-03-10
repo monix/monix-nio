@@ -23,19 +23,55 @@ import monix.eval.Callback
 import monix.execution.Scheduler
 
 package object tcp {
+  /**
+   * Returns a TCP socket [[monix.reactive.Observable Observable]] that can be subscribed to
+   * in order to read the incoming bytes asynchronously.
+   * It will close the socket on end-of-stream, signalling [[monix.execution.Ack.Stop Stop]]
+   * after subscription or by cancelling it directly
+   *
+   * @param host hostname
+   * @param port TCP port number
+   * @param bufferSize the size of the buffer used for reading
+   *
+   * @return an [[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]]
+   */
   def readAsync(host: String, port: Int, bufferSize: Int = 256 * 1024) =
     new AsyncSocketChannelObservable(host, port, bufferSize)
 
+  /**
+   * Returns a TCP socket [[monix.reactive.Consumer Consumer]] that can be used
+   * to send data asynchronously from an [[monix.reactive.Observable Observable]].
+   * The underlying socket will be closed when the
+   * [[monix.reactive.Observable Observable]] ends
+   *
+   * @param host hostname
+   * @param port TCP port number
+   *
+   * @return an [[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]
+   */
   def writeAsync(host: String, port: Int) =
     new AsyncSocketChannelConsumer(host, port)
 
+  /**
+   * Creates a TCP client - an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
+   * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
+   * that both are using the same underlying socket.
+   * The reader will be the one in charge of closing the underlying socket by
+   * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly
+   *
+   * @param host hostname
+   * @param port TCP port number
+   * @param bufferSize the size of the buffer used for reading
+   *
+   * @return an [[monix.nio.tcp.AsyncSocketChannelClient AsyncSocketChannelClient]]
+   */
   def readWriteAsync(
     host: String,
     port: Int,
     bufferSize: Int = 256 * 1024
   )(implicit scheduler: Scheduler): AsyncSocketChannelClient = AsyncSocketChannelClient(host, port, bufferSize)
 
-  private[tcp] def asyncChannelWrapper(asyncSocketChannel: AsyncSocketChannel) = new AsyncChannel {
+  private[tcp] def asyncChannelWrapper(asyncSocketChannel: AsyncSocketChannel, closeWhenDone: Boolean) = new AsyncChannel {
     override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
       asyncSocketChannel.read(dst, callback)
 
@@ -45,6 +81,6 @@ package object tcp {
     override def close(): Unit =
       asyncSocketChannel.close()
 
-    override def closeOnComplete(): Boolean = asyncSocketChannel.closeWhenDone
+    override def closeOnComplete(): Boolean = closeWhenDone
   }
 }
