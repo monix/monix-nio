@@ -71,7 +71,7 @@ private[nio] final class ExecutorServiceWrapper(scheduler: Scheduler)
 
   override def shutdownNow(): util.List[Runnable] = {
     shutdown()
-    Nil.asJava
+    List.empty[Runnable].asJava
   }
 }
 

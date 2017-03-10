@@ -57,7 +57,7 @@ final case class AsyncSocketChannelClient(
 
   /**
    * The TCP client reader.
-   * It is the one responsible to close the connection
+   * It is the one responsible for closing the connection
    * when used together with a writer ([[monix.nio.tcp.AsyncSocketChannelConsumer]]),
    * by using a [[monix.reactive.observers.Subscriber]]
    * and signal [[monix.execution.Ack.Stop]] or cancel it
