@@ -2,12 +2,12 @@ import com.typesafe.sbt.pgp.PgpKeys
 import scala.xml.Elem
 import scala.xml.transform.{RewriteRule, RuleTransformer}
 
-val monixVersion = "2.2.2"
+val monixVersion = "2.2.3"
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.12.1",
   crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.1"),
 
   scalacOptions ++= Seq(
