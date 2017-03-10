@@ -17,43 +17,49 @@
 
 package monix.nio
 
+import java.nio.ByteBuffer
 import java.nio.file.{ Path, StandardOpenOption }
-import java.util.concurrent.ExecutorService
 
-import monix.nio.file.internal.AsyncFileChannel
+import monix.eval.Callback
+import monix.execution.Scheduler
 
 package object file {
-  def readAsync(
-    path: Path,
-    chunkSize: Int,
-    executorService: Option[ExecutorService] = None,
-    onOpenError: Throwable => Unit = _ => ()
-  ): AsyncFileReaderObservable = {
-
+  def readAsync(path: Path, chunkSize: Int)(implicit s: Scheduler): AsyncFileChannelObservable = {
     require(chunkSize > 1)
-    val channel = AsyncFileChannel.openRead(path, Set.empty, executorService, onOpenError)
-    new AsyncFileReaderObservable(channel, chunkSize)
+
+    val channel = AsyncFileChannel(path.toFile, StandardOpenOption.READ)
+    new AsyncFileChannelObservable(channel, chunkSize)
   }
 
   def writeAsync(
     path: Path,
-    flags: Seq[StandardOpenOption] = Seq.empty,
-    executorService: Option[ExecutorService] = None,
-    onOpenError: Throwable => Unit = _ => ()
-  ): AsyncFileWriterConsumer = {
+    flags: Seq[StandardOpenOption] = Seq.empty
+  )(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
-    appendAsync(path, 0, flags, executorService, onOpenError)
+    appendAsync(path, 0, flags)
   }
 
   def appendAsync(
     path: Path,
     startPosition: Long,
-    flags: Seq[StandardOpenOption] = Seq.empty,
-    executorService: Option[ExecutorService] = None,
-    onOpenError: Throwable => Unit = _ => ()
-  ): AsyncFileWriterConsumer = {
+    flags: Seq[StandardOpenOption] = Seq.empty
+  )(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
-    val channel = AsyncFileChannel.openWrite(path, flags.toSet, executorService, onOpenError)
-    new AsyncFileWriterConsumer(channel, startPosition)
+    val flagsWithWriteOptions = flags :+ StandardOpenOption.WRITE :+ StandardOpenOption.CREATE
+    val channel = AsyncFileChannel(path.toFile, flagsWithWriteOptions: _*)
+    new AsyncFileChannelConsumer(channel, startPosition)
+  }
+
+  private[file] def asyncChannelWrapper(asyncFileChannel: AsyncFileChannel) = new AsyncChannel {
+    override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
+      asyncFileChannel.read(dst, position, callback)
+
+    override def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
+      asyncFileChannel.write(b, position, callback)
+
+    override def close(): Unit =
+      asyncFileChannel.close()
+
+    override def closeOnComplete(): Boolean = true
   }
 }

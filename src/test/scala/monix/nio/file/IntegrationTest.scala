@@ -15,15 +15,17 @@
  * limitations under the License.
  */
 
-package monix.nio
+package monix.nio.file
 
 import java.nio.file.{ Files, Paths, StandardOpenOption }
 import java.util
-import file._
+
 import minitest.SimpleTestSuite
 import monix.eval.Callback
-import scala.concurrent.{ Await, Promise }
+import monix.nio.file
+
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
 import scala.util.control.NonFatal
 
 object IntegrationTest extends SimpleTestSuite {

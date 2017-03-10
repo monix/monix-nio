@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package monix.nio
+package monix.nio.internal
 
 import java.nio.ByteBuffer
 
-import monix.eval.Callback
-
-trait AsyncMonixChannel extends AutoCloseable {
-  def size(): Long
-  def close(): Unit
-  def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit
-  def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit
-  def closeOnComplete = true
+private[nio] object Bytes {
+  def apply(bf: ByteBuffer, n: Int) = {
+    if (n < 0) EmptyBytes
+    else NonEmptyBytes(bf.array().take(n))
+  }
 }
+private[nio] sealed trait Bytes
+private[nio] case class NonEmptyBytes(arr: Array[Byte]) extends Bytes
+private[nio] case object EmptyBytes extends Bytes

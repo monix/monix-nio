@@ -15,16 +15,17 @@
  * limitations under the License.
  */
 
-package monix.nio
+package monix.nio.file
 
-import java.nio.ByteBuffer
+import monix.nio.AsyncChannelObservable
 
-private[nio] object Bytes {
-  def apply(bf: ByteBuffer, n: Int) = {
-    if (n < 0) EmptyBytes
-    else NonEmptyBytes(bf.array().take(n))
+final class AsyncFileChannelObservable(
+    asyncFileChannel: AsyncFileChannel,
+    size: Int
+) extends AsyncChannelObservable {
+
+  override def bufferSize = size
+  override def channel = Option {
+    asyncChannelWrapper(asyncFileChannel)
   }
 }
-private[nio] sealed trait Bytes
-private[nio] case class NonEmptyBytes(arr: Array[Byte]) extends Bytes
-private[nio] case object EmptyBytes extends Bytes

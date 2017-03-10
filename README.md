@@ -30,34 +30,52 @@ libraryDependencies += "io.monix" %% "monix-nio" % "0.0.1"
 ### Read from a text file
 
 ```scala
+import monix.nio.text.UTF8Codec._
+import monix.nio.file._
+  
 implicit val ctx = monix.execution.Scheduler.Implicits.global
-val from = Paths.get(this.getClass.getResource("/myFile.txt").toURI)
-monix.nio.file.readAsync(from, 30)
-  .pipeThrough(utf8Decode)//decode utf8, If you need Array[Byte] just skip the decoding
-  .foreach(Console.print(_))//print each char
+val from = java.nio.file.Paths.get("/myFile.txt")
+  
+readAsync(from, 30)
+  .pipeThrough(utf8Decode) // decode utf8, If you need Array[Byte] just skip the decoding
+  .foreach(Console.print)  // print each char
 ```
 
 ### Write to a file
 
 ```scala
+import monix.reactive.Observable
+import monix.nio.file._
+  
 implicit val ctx = monix.execution.Scheduler.Implicits.global
-val to = Paths.get("/out.txt")
-val bytes = "Test String".getBytes.grouped(3)
+val to = java.nio.file.Paths.get("/out.txt")
+val bytes = "Hello world!".getBytes.grouped(3)
+  
 Observable
   .fromIterator(bytes)
-  .consumeWith(file.writeAsync(to))
+  .consumeWith(writeAsync(to))
   .runAsync
 ```
 
 ### Copy a file (text with decode and encode utf8)
 
 ```scala
-val from = Paths.get("from.txt")
-val to = Paths.get("to.txt")
-val consumer = file.writeAsync(to)
+import monix.eval.Callback
+import monix.nio.text.UTF8Codec._
+import monix.nio.file._
+  
+val from = java.nio.file.Paths.get("from.txt")
+val to = java.nio.file.Paths.get("to.txt")
+  
+val consumer = writeAsync(to)
+  
+val callback = new Callback[Long] {
+  override def onSuccess(value: Long): Unit = println(s"Copied $value bytes.")
+  override def onError(ex: Throwable): Unit = println(ex)
+}
 readAsync(from, 3)
   .pipeThrough(utf8Decode)
-  .map{ str =>
+  .map { str =>
     Console.println(str) // do something with it
     str
   }
@@ -68,53 +86,62 @@ readAsync(from, 3)
 
 ### Read from TCP
 ```commandline
-$echo 'monix-tcp' | nc -l -k 9000
+$ echo 'monix-tcp' | nc -l -k 9000
 ```
 ```scala
-import monix.execution.Scheduler.Implicits.global
-
+import monix.reactive.Consumer
+import monix.nio.tcp._
+  
+implicit val ctx = monix.execution.Scheduler.Implicits.global
+  
 val callback = new monix.eval.Callback[Unit] {
   override def onSuccess(value: Unit): Unit = println("Completed")
   override def onError(ex: Throwable): Unit = println(ex)
 }
-    
-val reader = monix.nio.tcp.AsyncTcpClient.tcpReader("localhost", 9000)
-reader
-  .consumeWith(monix.reactive.Consumer.foreach(c => Console.out.print(new String(c))))
+readAsync("localhost", 9000)
+  .consumeWith(Consumer.foreach(c => Console.out.print(new String(c))))
   .runAsync(callback)
 ```
 
 ### Write to TCP
 ```commandline
-$nc -l -k 9000
+$ nc -l -k 9000
 ```
 ```scala
-import monix.execution.Scheduler.Implicits.global
-
+import monix.reactive.Observable
+import monix.nio.tcp._
+  
+implicit val ctx = monix.execution.Scheduler.Implicits.global
+  
+val tcpConsumer = writeAsync("localhost", 9000)
+val chunkSize = 2
+  
 val callback = new monix.eval.Callback[Long] {
-  override def onSuccess(value: Long): Unit = println(s"Sent $value bytes")
+  override def onSuccess(value: Long): Unit = println(s"Sent $value bytes.")
   override def onError(ex: Throwable): Unit = println(ex)
 }
-
-val tcpConsumer = monix.nio.tcp.AsyncTcpClient.tcpWriter("localhost", 9000)
-val chunkSize = 2
-monix.reactive.Observable
-  .fromIterator("monix-tcp".getBytes.grouped(chunkSize))
+Observable
+  .fromIterator("Hello world!".getBytes.grouped(chunkSize))
   .consumeWith(tcpConsumer)
   .runAsync(callback)
 ```
 
 ### Make a raw HTTP request
 ```commandline
-$tail -f conn.txt | nc -l -k 9000 > conn.txt
+$ tail -f conn.txt | nc -l -k 9000 > conn.txt
 ```
 ```scala
-import monix.execution.Scheduler.Implicits.global
+import monix.reactive.Observable
+import monix.eval.Callback
+import monix.nio.tcp._
   
-val asyncTcpClient = 
-  monix.nio.tcp.AsyncTcpClient("httpbin.org", 80, t => println(s"ERR $t")) // or use localhost:9000
+implicit val ctx = monix.execution.Scheduler.Implicits.global
   
-val callbackR = new monix.eval.Callback[Unit] {
+val asyncTcpClient = readWriteAsync("httpbin.org", 80) // or use localhost:9000
+val request = 
+  "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
+   
+val callbackR = new Callback[Unit] {
   override def onSuccess(value: Unit): Unit = println("OK")
   override def onError(ex: Throwable): Unit = println(ex)
 }
@@ -132,11 +159,7 @@ asyncTcpClient
   }
   .runAsync(callbackR)
   
-  
-val request = 
-  "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
-  
-val callbackW = new monix.eval.Callback[Long] {
+val callbackW = new Callback[Long] {
   override def onSuccess(value: Long): Unit = println(s"Sent $value bytes")
   override def onError(ex: Throwable): Unit = println(ex)
 }   
@@ -144,7 +167,9 @@ asyncTcpClient
   .tcpConsumer
   .flatMap { writer =>
     val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
-    monix.reactive.Observable.fromIterable(data).consumeWith(writer)
+    Observable
+      .fromIterable(data)
+      .consumeWith(writer)
   }
   .runAsync(callbackW)
 ```

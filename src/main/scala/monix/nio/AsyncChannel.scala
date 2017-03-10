@@ -15,15 +15,16 @@
  * limitations under the License.
  */
 
-package monix.nio.file
+package monix.nio
 
-import monix.nio.{ AsyncChannelObservable, AsyncMonixChannel }
+import java.nio.ByteBuffer
 
-final class AsyncFileReaderObservable(
-    fileChannel: AsyncMonixChannel,
-    size: Int
-) extends AsyncChannelObservable[AsyncMonixChannel] {
+import monix.eval.Callback
 
-  override def bufferSize = size
-  override def channel = Some(fileChannel)
+private[nio] trait AsyncChannel extends AutoCloseable {
+
+  def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit
+  def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit
+  def close(): Unit
+  def closeOnComplete(): Boolean
 }

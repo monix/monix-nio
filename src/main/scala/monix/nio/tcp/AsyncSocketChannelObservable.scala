@@ -25,29 +25,29 @@ import monix.reactive.observers.Subscriber
 
 import scala.concurrent.Promise
 
-final class AsyncTcpClientObservable private[tcp] (
+final class AsyncSocketChannelObservable private[tcp] (
     host: String, port: Int,
     buffSize: Int = 256 * 1024
-) extends AsyncChannelObservable[SocketClient] {
+) extends AsyncChannelObservable {
 
   override def bufferSize = buffSize
 
   private[this] val connectedSignal = Promise[Unit]()
-  private[this] var socketClient: Option[SocketClient] = None
+  private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
 
-  private[tcp] def this(client: SocketClient, buffSize: Int) {
-    this(client.to.getHostString, client.to.getPort, buffSize)
-    this.socketClient = Option(client)
+  private[tcp] def this(asc: AsyncSocketChannel, buffSize: Int) {
+    this(asc.socketAddress.getHostString, asc.socketAddress.getPort, buffSize)
+    this.asyncSocketChannel = Option(asc)
   }
 
-  override protected def channel = socketClient
+  override def channel = asyncSocketChannel.map(asyncChannelWrapper)
 
   override def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler
-    if (socketClient.isDefined) {
+    if (asyncSocketChannel.isDefined) {
       connectedSignal.success(())
     } else {
-      socketClient = Option(SocketClient(new InetSocketAddress(host, port), onOpenError = subscriber.onError))
+      asyncSocketChannel = Option(AsyncSocketChannel(new InetSocketAddress(host, port)))
       val connectCallback = new Callback[Void]() {
         override def onSuccess(value: Void): Unit = {
           connectedSignal.success(())
@@ -59,7 +59,7 @@ final class AsyncTcpClientObservable private[tcp] (
         }
       }
 
-      socketClient.foreach(_.connect(connectCallback))
+      asyncSocketChannel.foreach(_.connect(connectCallback))
     }
 
     connectedSignal.future
