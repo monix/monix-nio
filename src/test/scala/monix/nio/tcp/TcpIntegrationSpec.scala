@@ -35,7 +35,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
   */
 
   // TODO test with a server when it's implemented
-  test("write to a TCP (HTTP) connection successfully") {
+  test("write to a TCP connection successfully") {
     val data = Array.fill(8)("monix".getBytes())
     val chunkSize = 2 // very small chunks for testing
 
@@ -45,7 +45,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }
 
-    val tcpConsumer = writeAsync("monix.io", 443)
+    val tcpConsumer = writeAsync("google.com", 80)
     Observable
       .fromIterable(data)
       .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))

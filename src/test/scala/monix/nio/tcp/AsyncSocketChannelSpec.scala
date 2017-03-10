@@ -5,43 +5,43 @@ import java.nio.ByteBuffer
 
 import minitest.SimpleTestSuite
 
-import scala.util.{ Failure, Success }
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
-class AsyncSocketChannelSpec extends SimpleTestSuite {
+object AsyncSocketChannelSpec extends SimpleTestSuite {
 
-  test("simple write test") {
+  test("simple connect and write test") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
     val asyncSocketChannel = AsyncSocketChannel()
     val connectF = asyncSocketChannel.connect(new InetSocketAddress("google.com", 80))
 
-    val bytes = ByteBuffer.wrap("Hello world!".getBytes("UTF-8"))
-    val writeF = connectF.flatMap(_ => asyncSocketChannel.write(bytes, None))
+    val data = "Hello world!".getBytes("UTF-8")
+    val bytes = ByteBuffer.wrap(data)
+    val writeF = connectF
+      .flatMap(_ => asyncSocketChannel.write(bytes, Some(4.seconds)))
+      .map { result =>
+        asyncSocketChannel.stopWriting()
+        result
+      }
 
-    writeF.onComplete {
-      case Success(nr) =>
-        println(f"Bytes written: $nr%d")
-
-      case Failure(exc) =>
-        println(s"ERR: $exc")
-    }
+    assertEquals(Await.result(writeF, 5.seconds), data.length)
   }
 
-  test("simple read test") {
+  test("simple connect and read test") {
     implicit val ctx = monix.execution.Scheduler.Implicits.global
 
     val asyncSocketChannel = AsyncSocketChannel()
     val connectF = asyncSocketChannel.connect(new InetSocketAddress("google.com", 80))
 
-    val buff = ByteBuffer.allocate(1024)
-    val writeF = connectF.flatMap(_ => asyncSocketChannel.read(buff, None))
+    val buff = ByteBuffer.allocate(0)
+    val readF = connectF
+      .flatMap(_ => asyncSocketChannel.read(buff, Some(4.seconds)))
+      .map { _ =>
+        asyncSocketChannel.stopReading()
+        0
+      }
 
-    writeF.onComplete {
-      case Success(nr) =>
-        println(f"Bytes read: $nr%d")
-
-      case Failure(exc) =>
-        println(s"ERR: $exc")
-    }
+    assertEquals(Await.result(readF, 5.seconds), 0)
   }
 }
