@@ -81,7 +81,7 @@ package object tcp {
   def asyncServer(
     host: String,
     port: Int
-  )(implicit scheduler: Scheduler) = AsyncTcpServer(host, port)
+  )(implicit scheduler: Scheduler) = AsyncTcpServer(host, port).tcpServer
 
   private[tcp] def asyncChannelWrapper(asyncSocketChannel: AsyncSocketChannel, closeWhenDone: Boolean) = new AsyncChannel {
     override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =

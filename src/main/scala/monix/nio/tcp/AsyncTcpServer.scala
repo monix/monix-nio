@@ -16,8 +16,7 @@ final case class AsyncTcpServer(host: String, port: Int)(implicit scheduler: Sch
   /**
    * @return the underlying [[monix.nio.tcp.AsyncServerSocketChannel AsyncServerSocketChannel]]
    */
-  def tcpServer: Task[AsyncServerSocketChannel] = Task {
-    underlyingAsyncServerSocketClient.bind(new java.net.InetSocketAddress(host, port))
-    underlyingAsyncServerSocketClient
-  }
+  def tcpServer: Task[AsyncServerSocketChannel] =
+    Task(underlyingAsyncServerSocketClient.bind(new java.net.InetSocketAddress(host, port)))
+      .map(_ => underlyingAsyncServerSocketClient)
 }

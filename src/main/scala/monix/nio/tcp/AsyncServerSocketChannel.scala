@@ -18,20 +18,28 @@ import scala.util.control.NonFatal
  * [[https://docs.oracle.com/javase/8/docs/api/java/nio/channels/AsynchronousServerSocketChannel.html java.nio.channels.AsynchronousServerSocketChannel]]
  * (class available since Java 7 for doing async I/O on sockets).
  *
- * TODO
  * @example {{{
- *   val asyncSocketChannel = AsyncSocketChannel()
- *
- *   val connectF = asyncSocketChannel.connect(new InetSocketAddress("google.com", 80))
+ *   val server = AsyncServerSocketChannel()
+ *   server.bind(new InetSocketAddress(InetAddress.getByName(null), 9000))
  *
  *   val bytes = ByteBuffer.wrap("Hello world!".getBytes("UTF-8"))
- *   val writeF = connectF.flatMap(_ => asyncSocketChannel.write(bytes, None))
+ *   val writeF = server
+ *     .accept()
+ *     .flatMap { conn =>
+ *       val writeF0 = conn.write(bytes, None)
+ *       conn.stopWriting()
+ *       writeF0
+ *     }
+ *     .map { sentLen =>
+ *        server.close()
+ *        sentLen
+ *     }
  *
  *   writeF.onComplete {
  *     case Success(nr) =>
- *       println(f"Bytes written: $nr%d")
+ *       println(f"Bytes sent: $nr%d")
  *
- *    case Failure(exc) =>
+ *     case Failure(exc) =>
  *       println(s"ERR: $exc")
  *   }
  * }}}

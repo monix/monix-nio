@@ -15,7 +15,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
   test("connect and read from a TCP source successfully") {
     val p = Promise[Boolean]()
-    asyncServer(InetAddress.getByName(null).getHostName, 9000).tcpServer.map { asyncServerSocketChannel =>
+    asyncServer(InetAddress.getByName(null).getHostName, 9000).map { asyncServerSocketChannel =>
       val serverT = asyncServerSocketChannel.acceptL()
         .flatMap { serverSocket =>
           serverSocket
