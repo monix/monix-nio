@@ -218,13 +218,13 @@ object AsyncSocketChannel {
   /**
    * Opens a socket channel for the given [[java.net.InetSocketAddress]]
    *
-   * @param reuseAddress [[java.net.ServerSocket#setReuseAddress]]
-   * @param sendBufferSize [[java.net.Socket#setSendBufferSize]]
+   * @param reuseAddress      [[java.net.ServerSocket#setReuseAddress]]
+   * @param sendBufferSize    [[java.net.Socket#setSendBufferSize]]
    * @param receiveBufferSize [[java.net.Socket#setReceiveBufferSize]] [[java.net.ServerSocket#setReceiveBufferSize]]
-   * @param keepAlive [[java.net.Socket#setKeepAlive]]
-   * @param noDelay [[java.net.Socket#setTcpNoDelay]]
+   * @param keepAlive         [[java.net.Socket#setKeepAlive]]
+   * @param noDelay           [[java.net.Socket#setTcpNoDelay]]
    *
-   * @param s is the `Scheduler` used for asynchronous computations
+   * @param s                 is the `Scheduler` used for asynchronous computations
    *
    * @return an [[monix.nio.tcp.AsyncSocketChannel]] instance for handling reads and writes.
    */
@@ -239,7 +239,7 @@ object AsyncSocketChannel {
     NewIOImplementation(reuseAddress, sendBufferSize, receiveBufferSize, keepAlive, noDelay)
   }
 
-  private final case class NewIOImplementation(
+  private[tcp] final case class NewIOImplementation(
       reuseAddress: Boolean = true,
       sendBufferSize: Int = 256 * 1024,
       receiveBufferSize: Int = 256 * 1024,
@@ -247,22 +247,35 @@ object AsyncSocketChannel {
       noDelay: Boolean = false
   )(implicit scheduler: Scheduler) extends AsyncSocketChannel {
 
+    private[this] var existingAsyncSocketChannelO: Option[AsynchronousSocketChannel] = None
+
+    private[tcp] def this(asyncSocketChannel: AsynchronousSocketChannel)(implicit scheduler: Scheduler) {
+      this()
+      this.existingAsyncSocketChannelO = Option(asyncSocketChannel)
+    }
+
     private[this] lazy val asyncSocketChannel: Either[Throwable, AsynchronousSocketChannel] =
-      try {
-        val ag = AsynchronousChannelGroup.withThreadPool(ExecutorServiceWrapper(scheduler))
-        val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(ag)
+      existingAsyncSocketChannelO match {
+        case Some(asc) =>
+          Right(asc)
 
-        ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
-        ch.setOption[Integer](StandardSocketOptions.SO_SNDBUF, sendBufferSize)
-        ch.setOption[Integer](StandardSocketOptions.SO_RCVBUF, receiveBufferSize)
-        ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_KEEPALIVE, keepAlive)
-        ch.setOption[java.lang.Boolean](StandardSocketOptions.TCP_NODELAY, noDelay)
+        case None =>
+          try {
+            val ag = AsynchronousChannelGroup.withThreadPool(ExecutorServiceWrapper(scheduler))
+            val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(ag)
 
-        Right(ch)
-      } catch {
-        case NonFatal(exc) =>
-          scheduler.reportFailure(exc)
-          Left(exc)
+            ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
+            ch.setOption[Integer](StandardSocketOptions.SO_SNDBUF, sendBufferSize)
+            ch.setOption[Integer](StandardSocketOptions.SO_RCVBUF, receiveBufferSize)
+            ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_KEEPALIVE, keepAlive)
+            ch.setOption[java.lang.Boolean](StandardSocketOptions.TCP_NODELAY, noDelay)
+
+            Right(ch)
+          } catch {
+            case NonFatal(exc) =>
+              scheduler.reportFailure(exc)
+              Left(exc)
+          }
       }
 
     override def connect(remote: InetSocketAddress, cb: Callback[Unit]): Unit = {

@@ -63,14 +63,25 @@ package object tcp {
    * @param host hostname
    * @param port TCP port number
    * @param bufferSize the size of the buffer used for reading
-   *
-   * @return an [[monix.nio.tcp.AsyncSocketChannelClient AsyncSocketChannelClient]]
+   * @return an [[monix.nio.tcp.AsyncTcpClient AsyncTcpClient]]
    */
   def readWriteAsync(
     host: String,
     port: Int,
     bufferSize: Int = 256 * 1024
-  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = AsyncSocketChannelClient(host, port, bufferSize)
+  )(implicit scheduler: Scheduler): AsyncTcpClient = AsyncTcpClient(host, port, bufferSize)
+
+  /**
+   * Creates a TCP server
+   *
+   * @param host hostname
+   * @param port TCP port number
+   * @return an [[monix.nio.tcp.AsyncTcpServer AsyncTcpServer]]
+   */
+  def asyncServer(
+    host: String,
+    port: Int
+  )(implicit scheduler: Scheduler) = AsyncTcpServer(host, port)
 
   private[tcp] def asyncChannelWrapper(asyncSocketChannel: AsyncSocketChannel, closeWhenDone: Boolean) = new AsyncChannel {
     override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =

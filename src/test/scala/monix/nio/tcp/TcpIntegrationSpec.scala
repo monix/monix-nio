@@ -1,5 +1,7 @@
 package monix.nio.tcp
 
+import java.net.InetAddress
+
 import minitest.SimpleTestSuite
 import monix.eval.{ Callback, Task }
 import monix.execution.Ack.{ Continue, Stop }
@@ -11,30 +13,41 @@ import scala.concurrent.{ Await, Promise }
 object TcpIntegrationSpec extends SimpleTestSuite {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
 
-  /* TODO uncomment and test with a server when it's implemented
   test("connect and read from a TCP source successfully") {
     val p = Promise[Boolean]()
-    val t = Task {
-      val tcpObservable = readAsync("localhost", 9000, 2) // echo monix | nc -l 9000
-      tcpObservable.subscribe(
-        (bytes: Array[Byte]) => {
-          val chunk = new String(bytes, "UTF-8")
-          if (chunk.endsWith("\n")) {
-            p.success(true)
-            Stop
-          } else
-            Continue
-        },
-        err => p.failure(err),
-        () => p.success(true)
-      )
-    }
-    t.runAsync
+    asyncServer(InetAddress.getByName(null).getHostName, 9000).tcpServer.map { asyncServerSocketChannel =>
+      val serverT = asyncServerSocketChannel.acceptL()
+        .flatMap { serverSocket =>
+          serverSocket
+            .writeL(java.nio.ByteBuffer.wrap("Hello world!".getBytes))
+            .map(_ => serverSocket.stopWriting())
+            .map(_ => asyncServerSocketChannel.close())
+        }
+
+      val clientT = Task {
+        val tcpObservable = readAsync("localhost", 9000, 2)
+        tcpObservable.subscribe(
+          (bytes: Array[Byte]) => {
+            val chunk = new String(bytes, "UTF-8")
+            println(">>" + chunk)
+            if (chunk.endsWith("\n")) {
+              p.success(true)
+              Stop
+            } else
+              Continue
+          },
+          err => p.failure(err),
+          () => p.success(true)
+        )
+      }
+
+      serverT.runAsync
+      clientT.runAsync
+    }.runAsync
+
     assert(Await.result(p.future, 5.seconds))
   }
-  */
 
-  // TODO test with a server when it's implemented
   test("write to a TCP connection successfully") {
     val data = Array.fill(8)("monix".getBytes())
     val chunkSize = 2 // very small chunks for testing

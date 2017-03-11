@@ -31,10 +31,9 @@ import monix.execution.Scheduler
  * @param host hostname
  * @param port TCP port number
  * @param bufferSize the size of the buffer used for reading
- *
- * @return an [[monix.nio.tcp.AsyncSocketChannelClient AsyncSocketChannelClient]]
+ * @return an [[monix.nio.tcp.AsyncTcpClient AsyncTcpClient]]
  */
-final case class AsyncSocketChannelClient(
+final case class AsyncTcpClient(
     host: String,
     port: Int,
     bufferSize: Int
@@ -47,16 +46,14 @@ final case class AsyncSocketChannelClient(
     new AsyncSocketChannelConsumer(underlyingAsyncSocketClient, closeWhenDone = false)
 
   private[this] val connectedSignal = scala.concurrent.Promise[Unit]()
-  private[this] val connectCallback = new Callback[Unit]() {
-    override def onSuccess(value: Unit): Unit = {
-      connectedSignal.success(())
+  underlyingAsyncSocketClient
+    .connectL(new java.net.InetSocketAddress(host, port))
+    .map(connectedSignal.success)
+    .onErrorHandle { t =>
+      scheduler.reportFailure(t)
+      connectedSignal.failure(t)
     }
-    override def onError(ex: Throwable): Unit = {
-      connectedSignal.failure(ex)
-      scheduler.reportFailure(ex)
-    }
-  }
-  underlyingAsyncSocketClient.connect(new java.net.InetSocketAddress(host, port), connectCallback)
+    .runAsync
 
   /**
    * Returns the underlying TCP client reader.
