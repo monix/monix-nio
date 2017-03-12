@@ -21,18 +21,18 @@ import monix.eval.{ Callback, Task }
 import monix.execution.Scheduler
 
 /**
- * A TCP client composed of an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
- * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
- * that both are using the same underlying socket.
- * The reader will be the one in charge of closing the underlying socket by
- * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly.
- * In case `end-of-stream` is received the socket is closed automatically.
- *
- * @param host hostname
- * @param port TCP port number
- * @param bufferSize the size of the buffer used for reading
- * @return an [[monix.nio.tcp.AsyncTcpClient AsyncTcpClient]]
- */
+  * A TCP client composed of an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
+  * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
+  * that both are using the same underlying socket.
+  * The reader will be the one in charge of closing the underlying socket by
+  * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly.
+  * In case `end-of-stream` is received the socket is closed automatically.
+  *
+  * @param host hostname
+  * @param port TCP port number
+  * @param bufferSize the size of the buffer used for reading
+  * @return an [[monix.nio.tcp.AsyncTcpClient AsyncTcpClient]]
+  */
 final case class AsyncTcpClient(
     host: String,
     port: Int,
@@ -56,20 +56,20 @@ final case class AsyncTcpClient(
     .runAsync
 
   /**
-   * Returns the underlying TCP client reader.
-   * It is the one in charge of closing the underlying socket by
-   * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly,
-   * if no `end-of-stream` is received
-   * See [[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]]
-   */
+    * Returns the underlying TCP client reader.
+    * It is the one in charge of closing the underlying socket by
+    * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly,
+    * if no `end-of-stream` is received
+    * See [[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]]
+    */
   def tcpObservable: Task[AsyncSocketChannelObservable] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientObservable)
   }
 
   /**
-   * Returns the underlying TCP client writer.
-   * See [[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]
-   */
+    * Returns the underlying TCP client writer.
+    * See [[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]
+    */
   def tcpConsumer: Task[AsyncSocketChannelConsumer] = Task.fromFuture {
     connectedSignal.future.map(_ => asyncTcpClientConsumer)
   }

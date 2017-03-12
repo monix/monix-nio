@@ -32,76 +32,76 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 /**
- * An asynchronous channel for reading, writing, and manipulating a TCP socket.
- *
- * On the JVM this is a wrapper around
- * [[https://docs.oracle.com/javase/8/docs/api/java/nio/channels/AsynchronousSocketChannel.html java.nio.channels.AsynchronousSocketChannel]]
- * (class available since Java 7 for doing async I/O on sockets).
- *
- * @example {{{
- *   val asyncSocketChannel = AsyncSocketChannel()
- *
- *   val connectF = asyncSocketChannel.connect(new InetSocketAddress("google.com", 80))
- *
- *   val bytes = ByteBuffer.wrap("Hello world!".getBytes("UTF-8"))
- *   val writeF = connectF.flatMap(_ => asyncSocketChannel.write(bytes, None))
- *
- *   writeF.onComplete {
- *     case Success(nr) =>
- *       println(f"Bytes written: $nr%d")
- *
- *    case Failure(exc) =>
- *       println(s"ERR: $exc")
- *   }
- * }}}
- *
- * @define callbackDesc is the callback to be called with the result, once
- *         this asynchronous operation is complete
- *
- * @define connectDesc Connects this channel.
- *
- * @define remoteDesc the remote address to which this channel is to be connected
- *
- * @define localAddressDesc Asks the socket address that this channel's socket is bound to
- *
- * @define remoteAddressDesc Asks the remote address to which this channel's socket is connected
- *
- * @define readDesc Reads a sequence of bytes from this channel into the given buffer
- *
- * @define readDestDesc is the buffer holding the bytes read on completion
- *
- * @define readReturnDesc the number of bytes read or -1 if no bytes could be read
- *         because the channel has reached end-of-stream
- *
- * @define writeDesc Writes a sequence of bytes to this channel from the given buffer
- *
- * @define writeSrcDesc is the buffer holding the sequence of bytes to write
- *
- * @define writeReturnDesc the number of bytes that were written
- *
- * @define timeout an optional maximum time for the I/O operation to complete
- *
- * @define stopReadingDesc Indicates that this channel will not read more data
- *         - end-of-stream indication
- *
- * @define stopWritingDesc Indicates that this channel will not write more data
- *         - end-of-stream indication
- */
+  * An asynchronous channel for reading, writing, and manipulating a TCP socket.
+  *
+  * On the JVM this is a wrapper around
+  * [[https://docs.oracle.com/javase/8/docs/api/java/nio/channels/AsynchronousSocketChannel.html java.nio.channels.AsynchronousSocketChannel]]
+  * (class available since Java 7 for doing async I/O on sockets).
+  *
+  * @example {{{
+  *   val asyncSocketChannel = AsyncSocketChannel()
+  *
+  *   val connectF = asyncSocketChannel.connect(new InetSocketAddress("google.com", 80))
+  *
+  *   val bytes = ByteBuffer.wrap("Hello world!".getBytes("UTF-8"))
+  *   val writeF = connectF.flatMap(_ => asyncSocketChannel.write(bytes, None))
+  *
+  *   writeF.onComplete {
+  *     case Success(nr) =>
+  *       println(f"Bytes written: $nr%d")
+  *
+  *    case Failure(exc) =>
+  *       println(s"ERR: $exc")
+  *   }
+  * }}}
+  *
+  * @define callbackDesc is the callback to be called with the result, once
+  *         this asynchronous operation is complete
+  *
+  * @define connectDesc Connects this channel.
+  *
+  * @define remoteDesc the remote address to which this channel is to be connected
+  *
+  * @define localAddressDesc Asks the socket address that this channel's socket is bound to
+  *
+  * @define remoteAddressDesc Asks the remote address to which this channel's socket is connected
+  *
+  * @define readDesc Reads a sequence of bytes from this channel into the given buffer
+  *
+  * @define readDestDesc is the buffer holding the bytes read on completion
+  *
+  * @define readReturnDesc the number of bytes read or -1 if no bytes could be read
+  *         because the channel has reached end-of-stream
+  *
+  * @define writeDesc Writes a sequence of bytes to this channel from the given buffer
+  *
+  * @define writeSrcDesc is the buffer holding the sequence of bytes to write
+  *
+  * @define writeReturnDesc the number of bytes that were written
+  *
+  * @define timeout an optional maximum time for the I/O operation to complete
+  *
+  * @define stopReadingDesc Indicates that this channel will not read more data
+  *         - end-of-stream indication
+  *
+  * @define stopWritingDesc Indicates that this channel will not write more data
+  *         - end-of-stream indication
+  */
 abstract class AsyncSocketChannel extends AutoCloseable {
 
   /**
-   * $connectDesc
-   *
-   * @param remote $remoteDesc
-   * @param cb $callbackDesc
-   */
+    * $connectDesc
+    *
+    * @param remote $remoteDesc
+    * @param cb $callbackDesc
+    */
   def connect(remote: InetSocketAddress, cb: Callback[Unit]): Unit
 
   /**
-   * $connectDesc
-   *
-   * @param remote $remoteDesc
-   */
+    * $connectDesc
+    *
+    * @param remote $remoteDesc
+    */
   def connect(remote: InetSocketAddress): Future[Unit] = {
     val p = Promise[Unit]()
     connect(remote, Callback.fromPromise(p))
@@ -109,10 +109,10 @@ abstract class AsyncSocketChannel extends AutoCloseable {
   }
 
   /**
-   * $connectDesc
-   *
-   * @param remote $remoteDesc
-   */
+    * $connectDesc
+    *
+    * @param remote $remoteDesc
+    */
   def connectL(remote: InetSocketAddress): Task[Unit] =
     Task.unsafeCreate { (context, cb) =>
       implicit val s = context.scheduler
@@ -120,32 +120,32 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     }
 
   /**
-   * $localAddressDesc
-   */
+    * $localAddressDesc
+    */
   def localAddress(): Option[InetSocketAddress]
 
   /**
-   * $remoteAddressDesc
-   */
+    * $remoteAddressDesc
+    */
   def remoteAddress(): Option[InetSocketAddress]
 
   /**
-   * $readDesc
-   *
-   * @param dst $readDestDesc
-   * @param cb $callbackDesc . For this method it signals $readReturnDesc
-   * @param timeout $timeout
-   */
+    * $readDesc
+    *
+    * @param dst $readDestDesc
+    * @param cb $callbackDesc . For this method it signals $readReturnDesc
+    * @param timeout $timeout
+    */
   def read(dst: ByteBuffer, cb: Callback[Int], timeout: Option[Duration] = None): Unit
 
   /**
-   * $readDesc
-   *
-   * @param dst $readDestDesc
-   * @param timeout $timeout
-   *
-   * @return $readReturnDesc
-   */
+    * $readDesc
+    *
+    * @param dst $readDestDesc
+    * @param timeout $timeout
+    *
+    * @return $readReturnDesc
+    */
   def read(dst: ByteBuffer, timeout: Option[Duration]): Future[Int] = {
     val p = Promise[Int]()
     read(dst, Callback.fromPromise(p), timeout)
@@ -153,13 +153,13 @@ abstract class AsyncSocketChannel extends AutoCloseable {
   }
 
   /**
-   * $readDesc
-   *
-   * @param dst $readDestDesc
-   * @param timeout $timeout
-   *
-   * @return $readReturnDesc
-   */
+    * $readDesc
+    *
+    * @param dst $readDestDesc
+    * @param timeout $timeout
+    *
+    * @return $readReturnDesc
+    */
   def readL(dst: ByteBuffer, timeout: Option[Duration] = None): Task[Int] =
     Task.unsafeCreate { (context, cb) =>
       implicit val s = context.scheduler
@@ -167,22 +167,22 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     }
 
   /**
-   * $writeDesc
-   *
-   * @param src $writeSrcDesc
-   * @param cb $callbackDesc . For this method it signals $writeReturnDesc
-   * @param timeout $timeout
-   */
+    * $writeDesc
+    *
+    * @param src $writeSrcDesc
+    * @param cb $callbackDesc . For this method it signals $writeReturnDesc
+    * @param timeout $timeout
+    */
   def write(src: ByteBuffer, cb: Callback[Int], timeout: Option[Duration] = None): Unit
 
   /**
-   * $writeDesc
-   *
-   * @param src $writeSrcDesc
-   * @param timeout $timeout
-   *
-   * @return $writeReturnDesc
-   */
+    * $writeDesc
+    *
+    * @param src $writeSrcDesc
+    * @param timeout $timeout
+    *
+    * @return $writeReturnDesc
+    */
   def write(src: ByteBuffer, timeout: Option[Duration]): Future[Int] = {
     val p = Promise[Int]()
     write(src, Callback.fromPromise(p), timeout)
@@ -190,13 +190,13 @@ abstract class AsyncSocketChannel extends AutoCloseable {
   }
 
   /**
-   * $writeDesc
-   *
-   * @param src $writeSrcDesc
-   * @param timeout $timeout
-   *
-   * @return $writeReturnDesc
-   */
+    * $writeDesc
+    *
+    * @param src $writeSrcDesc
+    * @param timeout $timeout
+    *
+    * @return $writeReturnDesc
+    */
   def writeL(src: ByteBuffer, timeout: Option[Duration] = None): Task[Int] =
     Task.unsafeCreate { (context, cb) =>
       implicit val s = context.scheduler
@@ -204,30 +204,30 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     }
 
   /**
-   * $stopReadingDesc
-   */
+    * $stopReadingDesc
+    */
   def stopReading(): Unit
 
   /**
-   * $stopWritingDesc
-   */
+    * $stopWritingDesc
+    */
   def stopWriting(): Unit
 }
 
 object AsyncSocketChannel {
   /**
-   * Opens a socket channel for the given [[java.net.InetSocketAddress]]
-   *
-   * @param reuseAddress      [[java.net.ServerSocket#setReuseAddress]]
-   * @param sendBufferSize    [[java.net.Socket#setSendBufferSize]]
-   * @param receiveBufferSize [[java.net.Socket#setReceiveBufferSize]] [[java.net.ServerSocket#setReceiveBufferSize]]
-   * @param keepAlive         [[java.net.Socket#setKeepAlive]]
-   * @param noDelay           [[java.net.Socket#setTcpNoDelay]]
-   *
-   * @param s                 is the `Scheduler` used for asynchronous computations
-   *
-   * @return an [[monix.nio.tcp.AsyncSocketChannel]] instance for handling reads and writes.
-   */
+    * Opens a socket channel for the given [[java.net.InetSocketAddress]]
+    *
+    * @param reuseAddress      [[java.net.ServerSocket#setReuseAddress]]
+    * @param sendBufferSize    [[java.net.Socket#setSendBufferSize]]
+    * @param receiveBufferSize [[java.net.Socket#setReceiveBufferSize]] [[java.net.ServerSocket#setReceiveBufferSize]]
+    * @param keepAlive         [[java.net.Socket#setKeepAlive]]
+    * @param noDelay           [[java.net.Socket#setTcpNoDelay]]
+    *
+    * @param s                 is the `Scheduler` used for asynchronous computations
+    *
+    * @return an [[monix.nio.tcp.AsyncSocketChannel]] instance for handling reads and writes.
+    */
   def apply(
     reuseAddress: Boolean = true,
     sendBufferSize: Int = 256 * 1024,

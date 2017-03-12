@@ -25,14 +25,14 @@ import monix.nio.AsyncChannelConsumer
 import scala.concurrent.Promise
 
 /**
- * A TCP socket [[monix.reactive.Consumer Consumer]] that can be used
- * to send data asynchronously from an [[monix.reactive.Observable Observable]].
- * The underlying socket will be closed when the
- * [[monix.reactive.Observable Observable]] ends
- *
- * @param host hostname
- * @param port TCP port number
- */
+  * A TCP socket [[monix.reactive.Consumer Consumer]] that can be used
+  * to send data asynchronously from an [[monix.reactive.Observable Observable]].
+  * The underlying socket will be closed when the
+  * [[monix.reactive.Observable Observable]] ends
+  *
+  * @param host hostname
+  * @param port TCP port number
+  */
 final class AsyncSocketChannelConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer {
   private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
   private[this] var closeOnComplete = true

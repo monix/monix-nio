@@ -26,15 +26,15 @@ import monix.reactive.observers.Subscriber
 import scala.concurrent.Promise
 
 /**
- * A TCP socket [[monix.reactive.Observable Observable]] that can be subscribed to
- * in order to read the incoming bytes asynchronously.
- * The underlying socket is closed on `end-of-stream`, on signalling [[monix.execution.Ack.Stop Stop]]
- * after subscription or by cancelling it directly
- *
- * @param host hostname
- * @param port TCP port number
- * @param bufferSize the size of the buffer used for reading
- */
+  * A TCP socket [[monix.reactive.Observable Observable]] that can be subscribed to
+  * in order to read the incoming bytes asynchronously.
+  * The underlying socket is closed on `end-of-stream`, on signalling [[monix.execution.Ack.Stop Stop]]
+  * after subscription or by cancelling it directly
+  *
+  * @param host hostname
+  * @param port TCP port number
+  * @param bufferSize the size of the buffer used for reading
+  */
 final class AsyncSocketChannelObservable private[tcp] (
     host: String, port: Int,
     override val bufferSize: Int = 256 * 1024

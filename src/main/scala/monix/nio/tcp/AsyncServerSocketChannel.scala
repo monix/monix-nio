@@ -12,62 +12,62 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 /**
- * An asynchronous channel for stream-oriented listening sockets.
- *
- * On the JVM this is a wrapper around
- * [[https://docs.oracle.com/javase/8/docs/api/java/nio/channels/AsynchronousServerSocketChannel.html java.nio.channels.AsynchronousServerSocketChannel]]
- * (class available since Java 7 for doing async I/O on sockets).
- *
- * @example {{{
- *   val server = AsyncServerSocketChannel()
- *   server.bind(new InetSocketAddress(InetAddress.getByName(null), 9000))
- *
- *   val bytes = ByteBuffer.wrap("Hello world!".getBytes("UTF-8"))
- *   val writeF = server
- *     .accept()
- *     .flatMap { conn =>
- *       val writeF0 = conn.write(bytes, None)
- *       conn.stopWriting()
- *       writeF0
- *     }
- *     .map { sentLen =>
- *        server.close()
- *        sentLen
- *     }
- *
- *   writeF.onComplete {
- *     case Success(nr) =>
- *       println(f"Bytes sent: $nr%d")
- *
- *     case Failure(exc) =>
- *       println(s"ERR: $exc")
- *   }
- * }}}
- *
- * @define callbackDesc is the callback to be called with the result, once
- *         this asynchronous operation is complete
- *
- * @define acceptDesc Accepts a connection
- *
- * @define bindDesc Binds the channel's socket to a local address and configures the socket to listen for connections
- * @define localDesc the local address to bind the socket, or null to bind to an automatically assigned socket address
- * @define backlogDesc the maximum number of pending connections. If the backlog parameter has the value 0,
- *         or a negative value, then an implementation specific default is used.
- *
- * @define localAddressDesc Asks the socket address that this channel's socket is bound to
- */
+  * An asynchronous channel for stream-oriented listening sockets.
+  *
+  * On the JVM this is a wrapper around
+  * [[https://docs.oracle.com/javase/8/docs/api/java/nio/channels/AsynchronousServerSocketChannel.html java.nio.channels.AsynchronousServerSocketChannel]]
+  * (class available since Java 7 for doing async I/O on sockets).
+  *
+  * @example {{{
+  *   val server = AsyncServerSocketChannel()
+  *   server.bind(new InetSocketAddress(InetAddress.getByName(null), 9000))
+  *
+  *   val bytes = ByteBuffer.wrap("Hello world!".getBytes("UTF-8"))
+  *   val writeF = server
+  *     .accept()
+  *     .flatMap { conn =>
+  *       val writeF0 = conn.write(bytes, None)
+  *       conn.stopWriting()
+  *       writeF0
+  *     }
+  *     .map { sentLen =>
+  *        server.close()
+  *        sentLen
+  *     }
+  *
+  *   writeF.onComplete {
+  *     case Success(nr) =>
+  *       println(f"Bytes sent: $nr%d")
+  *
+  *     case Failure(exc) =>
+  *       println(s"ERR: $exc")
+  *   }
+  * }}}
+  *
+  * @define callbackDesc is the callback to be called with the result, once
+  *         this asynchronous operation is complete
+  *
+  * @define acceptDesc Accepts a connection
+  *
+  * @define bindDesc Binds the channel's socket to a local address and configures the socket to listen for connections
+  * @define localDesc the local address to bind the socket, or null to bind to an automatically assigned socket address
+  * @define backlogDesc the maximum number of pending connections. If the backlog parameter has the value 0,
+  *         or a negative value, then an implementation specific default is used.
+  *
+  * @define localAddressDesc Asks the socket address that this channel's socket is bound to
+  */
 abstract class AsyncServerSocketChannel extends AutoCloseable {
 
   /**
-   * $acceptDesc
-   *
-   * @param cb $callbackDesc
-   */
+    * $acceptDesc
+    *
+    * @param cb $callbackDesc
+    */
   def accept(cb: Callback[AsyncSocketChannel]): Unit
 
   /**
-   * $acceptDesc
-   */
+    * $acceptDesc
+    */
   def accept(): Future[AsyncSocketChannel] = {
     val p = Promise[AsyncSocketChannel]()
     accept(Callback.fromPromise(p))
@@ -75,8 +75,8 @@ abstract class AsyncServerSocketChannel extends AutoCloseable {
   }
 
   /**
-   * $acceptDesc
-   */
+    * $acceptDesc
+    */
   def acceptL(): Task[AsyncSocketChannel] =
     Task.unsafeCreate { (context, cb) =>
       implicit val s = context.scheduler
@@ -84,30 +84,30 @@ abstract class AsyncServerSocketChannel extends AutoCloseable {
     }
 
   /**
-   * $bindDesc
-   *
-   * @param local $localDesc
-   * @param backlog $backlogDesc
-   */
+    * $bindDesc
+    *
+    * @param local $localDesc
+    * @param backlog $backlogDesc
+    */
   def bind(local: InetSocketAddress, backlog: Int = 0): Unit
 
   /**
-   * $localAddressDesc
-   */
+    * $localAddressDesc
+    */
   def localAddress(): Option[InetSocketAddress]
 }
 
 object AsyncServerSocketChannel {
   /**
-   * Opens a server-socket channel for the given [[java.net.InetSocketAddress]]
-   *
-   * @param reuseAddress [[java.net.ServerSocket#setReuseAddress]]
-   * @param receiveBufferSize [[java.net.Socket#setReceiveBufferSize]] [[java.net.ServerSocket#setReceiveBufferSize]]
-   *
-   * @param s is the `Scheduler` used for asynchronous computations
-   *
-   * @return an [[monix.nio.tcp.AsyncServerSocketChannel]] instance for handling connections.
-   */
+    * Opens a server-socket channel for the given [[java.net.InetSocketAddress]]
+    *
+    * @param reuseAddress [[java.net.ServerSocket#setReuseAddress]]
+    * @param receiveBufferSize [[java.net.Socket#setReceiveBufferSize]] [[java.net.ServerSocket#setReceiveBufferSize]]
+    *
+    * @param s is the `Scheduler` used for asynchronous computations
+    *
+    * @return an [[monix.nio.tcp.AsyncServerSocketChannel]] instance for handling connections.
+    */
   def apply(
     reuseAddress: Boolean = true,
     receiveBufferSize: Int = 256 * 1024
