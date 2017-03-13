@@ -42,13 +42,15 @@ final class AsyncSocketChannelObservable private[tcp] (
 
   private[this] val connectedSignal = Promise[Unit]()
   private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
+  private[this] var closeOnComplete = true
 
-  private[tcp] def this(tsc: TaskSocketChannel, buffSize: Int) {
+  private[tcp] def this(tsc: TaskSocketChannel, buffSize: Int, closeWhenDone: Boolean) {
     this("", 0, buffSize)
     this.taskSocketChannel = Option(tsc)
+    this.closeOnComplete = closeWhenDone
   }
 
-  override lazy val channel = taskSocketChannel.map(asc => asyncChannelWrapper(asc, closeWhenDone = true))
+  override lazy val channel = taskSocketChannel.map(asc => asyncChannelWrapper(asc, closeOnComplete))
 
   override def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler

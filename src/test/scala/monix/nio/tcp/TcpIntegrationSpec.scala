@@ -95,24 +95,106 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     assert(result.forall(r => r))
   }
 
+  /*
+  test("server - handle 10000 clients (echo test)") {
+    val program = asyncServer(InetAddress.getByName(null).getHostName, 9000).flatMap { taskServerSocketChannel =>
+      val handlers = Observable
+        .fromIterable(1 to 2)
+        .mapAsync(16) { _ =>
+          Task {
+            val echoT = for {
+              conn <- taskServerSocketChannel.accept().map(tsc => readWriteAsync(tsc))
+              reader <- conn.tcpObservable
+              writer <- conn.tcpConsumer
+              written <- reader.doOnTerminate(_ => { println("echo"); conn.stopWriting() }).consumeWith(writer)
+              _ <- conn.close()
+            } yield {
+              println("handler - " + written)
+              written
+            }
+            echoT.runAsync(new Callback[Long] {
+              override def onError(ex: Throwable): Unit = ex.printStackTrace()
+              override def onSuccess(value: Long): Unit = println("ok1 - " + value)
+            })
+          }
+        }
+
+      val clients = Observable
+        .fromIterable(1 to 2)
+        .mapAsync(16) { i =>
+          val client = readWriteAsync("localhost", 9000, 8)
+
+          // writing
+          val data = s"Hello Monix - $i!".getBytes.grouped(8).toArray
+          val writeT = client.tcpConsumer.flatMap { writer =>
+            Observable.fromIterable(data).consumeWith(writer).flatMap(len => client.stopWriting().map(_ => len))
+          }
+
+          // reading the echo
+          val rp = Promise[Boolean]()
+          val readT = for {
+            reader <- client.tcpObservable
+            written <- Task.now(
+              reader
+                .doOnTerminate(_ => { println("Terminated"); client.close() })
+                .subscribe(
+                  bytes => {
+                    println(new String(bytes)); Continue
+                  },
+                  err => { println(err); rp.failure(err) },
+                  () => rp.success(true)
+                )
+            )
+          } yield {
+            written
+          }
+
+          writeT.runAsync(new Callback[Long] {
+            override def onError(ex: Throwable): Unit = ex.printStackTrace()
+            override def onSuccess(value: Long): Unit = println("ok2 - " + value)
+          })
+          readT.runAsync(new Callback[Cancelable] {
+            override def onError(ex: Throwable): Unit = ex.printStackTrace()
+            override def onSuccess(value: Cancelable): Unit = println("ok3")
+          })
+          Task.fromFuture(rp.future)
+        }
+
+      //clients.toListL.foreach()
+      val doneP = Promise[Boolean]()
+      handlers.doOnTerminate(_ => println("server done")).publish.connect()
+      clients
+        .doOnTerminate(_ => { println("TOO SOON"); taskServerSocketChannel.close() })
+        .subscribe(
+          (r: Boolean) => { println(r); Continue },
+          err => doneP.failure(err),
+          () => { println("DONE"); doneP.success(true) }
+        )
+      Task.fromFuture(doneP.future)
+    }
+
+    assert(Await.result(program.runAsync, 10.seconds))
+  }*/
+
   test("be able to make a HTTP GET request and pipe the response back") {
     val p = Promise[String]()
-    val asyncTcpClient = readWriteAsync("httpbin.org", 80)
+    val asyncTcpClient = readWriteAsync("httpbin.org", 80, 256 * 1024)
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map {
-      _.subscribe(
-        (bytes: Array[Byte]) => {
-          recv.append(new String(bytes, "UTF-8"))
-          if (recv.toString.contains("monix")) {
-            p.success(recv.toString)
-            Stop // stop as soon as the response is received
-          } else {
-            Continue
-          }
-        },
-        err => p.failure(err)
-      )
+      _
+        .doOnTerminateEval(_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .subscribe(
+          (bytes: Array[Byte]) => {
+            recv.append(new String(bytes, "UTF-8"))
+            if (recv.toString.contains("monix")) {
+              Stop // stop as soon as the response is received
+            } else {
+              Continue
+            }
+          },
+          err => p.failure(err)
+        )
     }.runAsync
 
     /* trigger a response to be read */
@@ -130,24 +212,23 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
   test("be able to reuse the same socket and make multiple requests") {
     val p = Promise[String]()
-    val asyncTcpClient = readWriteAsync("httpbin.org", 80)
+    val asyncTcpClient = readWriteAsync("httpbin.org", 80, 256 * 1024)
 
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>
-      reader.subscribe(
-        (bytes: Array[Byte]) => {
-          recv.append(new String(bytes, "UTF-8"))
-
-          if (recv.toString.contains("monix2")) {
-            /* stop as soon as the second response is received */
-            p.success(recv.toString)
-            Stop
-          } else {
-            Continue
-          }
-        },
-        err => p.failure(err)
-      )
+      reader
+        .doOnTerminateEval(_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .subscribe(
+          (bytes: Array[Byte]) => {
+            recv.append(new String(bytes, "UTF-8"))
+            if (recv.toString.contains("monix2")) {
+              Stop // stop as soon as the second response is received
+            } else {
+              Continue
+            }
+          },
+          err => p.failure(err)
+        )
     }.runAsync
 
     // test with small chunks (2 bytes) to test order

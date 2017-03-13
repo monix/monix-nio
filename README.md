@@ -137,7 +137,7 @@ import monix.nio.tcp._
   
 implicit val ctx = monix.execution.Scheduler.Implicits.global
   
-val asyncTcpClient = readWriteAsync("httpbin.org", 80) // or use localhost:9000
+val asyncTcpClient = readWriteAsync("httpbin.org", 80, 256 * 1024) // or use localhost:9000
 val request = 
   "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
    
@@ -148,13 +148,16 @@ val callbackR = new Callback[Unit] {
 asyncTcpClient
   .tcpObservable
   .map { reader =>
-    reader.subscribe(
+    reader
+    .doOnTerminateEval(_ => asyncTcpClient.close()) // clean
+    .subscribe(
       (bytes: Array[Byte]) => {
         println(new String(bytes, "UTF-8"))
-        monix.execution.Ack.Stop // closes the socket
+        monix.execution.Ack.Stop 
       },
       err => println(err),
-      () => println("Completed"))
+      () => println("Completed")
+    )
     ()
   }
   .runAsync(callbackR)
@@ -189,10 +192,9 @@ val data = Array.fill(8)("monix-tcp ".getBytes())
 val chunkSize = 32 // very small chunks for testing
   
 val recv = new StringBuilder()
-val pw = Promise[Unit]()
-val callbackW = new Callback[Unit] {
-  override def onSuccess(value: Unit): Unit = { println("Received: " + recv.toString); pw.success(()) }
-  override def onError(ex: Throwable): Unit = { println(ex); pw.failure(ex) }
+val callback = new Callback[Unit] {
+  override def onSuccess(value: Unit): Unit = println("Received: " + recv.toString)
+  override def onError(ex: Throwable): Unit = println(ex)
 }
   
 val server = TaskServerSocketChannel()
@@ -205,21 +207,14 @@ val readT = for {
 } yield {
   read
 }
-readT.runAsync(callbackW)
+readT.runAsync(callback)
   
-val pr = Promise[Unit]()
-val callbackR = new Callback[Long] {
-  override def onSuccess(value: Long): Unit = { println("Done writing"); pr.success(()) }
-  override def onError(ex: Throwable): Unit = pr.failure(ex)
-}
 val tcpConsumer = writeAsync("localhost", 9001)
 Observable
   .fromIterable(data)
   .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
   .consumeWith(tcpConsumer)
-  .runAsync(callbackR)
-  
-Await.result(Future.sequence(Seq(pr.future, pw.future)), 5.seconds)
+  .runAsync
 ```
 
 ## Maintainers

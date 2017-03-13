@@ -19,7 +19,7 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 
-import monix.eval.Callback
+import monix.eval.{ Callback, Task }
 import monix.nio.AsyncChannelConsumer
 
 import scala.concurrent.Promise
@@ -33,7 +33,11 @@ import scala.concurrent.Promise
   * @param host hostname
   * @param port TCP port number
   */
-final class AsyncSocketChannelConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer {
+final class AsyncSocketChannelConsumer private[tcp] (
+    host: String,
+    port: Int
+) extends AsyncChannelConsumer {
+
   private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
   private[this] var closeOnComplete = true
 

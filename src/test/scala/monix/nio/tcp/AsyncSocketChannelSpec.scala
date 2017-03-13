@@ -22,6 +22,7 @@ object AsyncSocketChannelSpec extends SimpleTestSuite {
       .flatMap(_ => asyncSocketChannel.write(bytes, Some(4.seconds)))
       .map { result =>
         asyncSocketChannel.stopWriting()
+        asyncSocketChannel.close()
         result
       }
 
@@ -39,6 +40,7 @@ object AsyncSocketChannelSpec extends SimpleTestSuite {
       .flatMap(_ => asyncSocketChannel.read(buff, Some(4.seconds)))
       .map { _ =>
         asyncSocketChannel.stopReading()
+        asyncSocketChannel.close()
         0
       }
 

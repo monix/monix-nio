@@ -49,7 +49,7 @@ package object tcp {
     * @return an [[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]]
     */
   def readAsync(taskSocketChannel: TaskSocketChannel, bufferSize: Int) = {
-    new AsyncSocketChannelObservable(taskSocketChannel, bufferSize)
+    new AsyncSocketChannelObservable(taskSocketChannel, bufferSize, true)
   }
 
   /**
@@ -77,32 +77,56 @@ package object tcp {
     * @return an [[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]
     */
   def writeAsync(taskSocketChannel: TaskSocketChannel) =
-    new AsyncSocketChannelConsumer(taskSocketChannel, closeWhenDone = true)
+    new AsyncSocketChannelConsumer(taskSocketChannel, true)
 
   /**
     * Creates a TCP client - an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
     * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
     * that both are using the same underlying socket.
-    * The reader will be the one in charge of closing the underlying socket by
-    * signalling [[monix.execution.Ack.Stop Stop]] after subscription or by cancelling it directly,
-    * if no `end-of-stream` is received
+    *
+    * In order to release the connection use [[monix.nio.tcp.AsyncSocketChannelClient#close() close()]]
     *
     * @param host hostname
     * @param port TCP port number
     * @param bufferSize the size of the buffer used for reading
+    *
     * @return an [[monix.nio.tcp.AsyncSocketChannelClient AsyncSocketChannelClient]]
     */
   def readWriteAsync(
     host: String,
     port: Int,
+    bufferSize: Int
+  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
+
+    AsyncSocketChannelClient(host, port, bufferSize)
+  }
+
+  /**
+    * Creates a TCP client - an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
+    * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
+    * that both are using the same underlying socket.
+    *
+    * In order to release the connection use [[monix.nio.tcp.AsyncSocketChannelClient#close() close()]]
+    *
+    * @param taskSocketChannel the underlying [[monix.nio.tcp.TaskSocketChannel TaskSocketChannel]]
+    * @param bufferSize the size of the buffer used for reading
+    *
+    * @return an [[monix.nio.tcp.AsyncSocketChannelClient AsyncSocketChannelClient]]
+    */
+  def readWriteAsync(
+    taskSocketChannel: TaskSocketChannel,
     bufferSize: Int = 256 * 1024
-  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = AsyncSocketChannelClient(host, port, bufferSize)
+  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
+
+    AsyncSocketChannelClient(taskSocketChannel, bufferSize)
+  }
 
   /**
     * Creates a TCP server
     *
     * @param host hostname
     * @param port TCP port number
+    *
     * @return a bound [[monix.nio.tcp.TaskServerSocketChannel TaskServerSocketChannel]]
     */
   def asyncServer(

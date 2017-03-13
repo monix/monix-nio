@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 
 import monix.eval.{ Callback, Task }
 import monix.execution.Ack.{ Continue, Stop }
-import monix.execution.{ Cancelable, Scheduler, UncaughtExceptionReporter }
+import monix.execution.{ Cancelable, Scheduler }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignmentCancelable
 import monix.execution.exceptions.APIContractViolationException
@@ -57,7 +57,7 @@ private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte
 
     val taskCallback = new Callback[Array[Byte]]() {
       override def onSuccess(value: Array[Byte]): Unit = {
-        closeChannel()
+        channel.collect { case sc if sc.closeOnComplete => closeChannel() }
       }
       override def onError(ex: Throwable): Unit = {
         closeChannel()

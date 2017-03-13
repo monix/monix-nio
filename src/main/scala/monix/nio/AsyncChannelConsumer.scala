@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 
 import monix.eval.Callback
 import monix.execution.Ack.{ Continue, Stop }
-import monix.execution.{ Ack, Cancelable, Scheduler, UncaughtExceptionReporter }
+import monix.execution.{ Ack, Cancelable, Scheduler }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.{ AssignableCancelable, SingleAssignmentCancelable }
 import monix.reactive.Consumer
@@ -93,7 +93,7 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
 
     private[nio] def onCancel(): Unit = {
       callbackCalled.set(true) /* the callback should not be called after cancel */
-      channel.collect { case sc if sc.closeOnComplete => closeChannel() }
+      closeChannel()
     }
 
     private[nio] def sendError(t: Throwable) =
