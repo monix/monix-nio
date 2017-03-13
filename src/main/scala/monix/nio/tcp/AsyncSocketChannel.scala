@@ -23,8 +23,8 @@ import java.nio.channels.spi.AsynchronousChannelProvider
 import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousSocketChannel, CompletionHandler }
 import java.util.concurrent.TimeUnit
 
-import monix.eval.{ Callback, Task }
-import monix.execution.Scheduler
+import monix.eval.Callback
+import monix.execution.{ Cancelable, Scheduler }
 import monix.nio.internal.ExecutorServiceWrapper
 
 import scala.concurrent.duration.Duration
@@ -54,36 +54,22 @@ import scala.util.control.NonFatal
   *       println(s"ERR: $exc")
   *   }
   * }}}
-  *
   * @define callbackDesc is the callback to be called with the result, once
   *         this asynchronous operation is complete
-  *
   * @define connectDesc Connects this channel.
-  *
   * @define remoteDesc the remote address to which this channel is to be connected
-  *
   * @define localAddressDesc Asks the socket address that this channel's socket is bound to
-  *
   * @define remoteAddressDesc Asks the remote address to which this channel's socket is connected
-  *
   * @define readDesc Reads a sequence of bytes from this channel into the given buffer
-  *
   * @define readDestDesc is the buffer holding the bytes read on completion
-  *
   * @define readReturnDesc the number of bytes read or -1 if no bytes could be read
   *         because the channel has reached end-of-stream
-  *
   * @define writeDesc Writes a sequence of bytes to this channel from the given buffer
-  *
   * @define writeSrcDesc is the buffer holding the sequence of bytes to write
-  *
   * @define writeReturnDesc the number of bytes that were written
-  *
   * @define timeout an optional maximum time for the I/O operation to complete
-  *
   * @define stopReadingDesc Indicates that this channel will not read more data
   *         - end-of-stream indication
-  *
   * @define stopWritingDesc Indicates that this channel will not write more data
   *         - end-of-stream indication
   */
@@ -108,25 +94,10 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     p.future
   }
 
-  /**
-    * $connectDesc
-    *
-    * @param remote $remoteDesc
-    */
-  def connectL(remote: InetSocketAddress): Task[Unit] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      connect(remote, Callback.async(cb))
-    }
-
-  /**
-    * $localAddressDesc
-    */
+  /** $localAddressDesc */
   def localAddress(): Option[InetSocketAddress]
 
-  /**
-    * $remoteAddressDesc
-    */
+  /** $remoteAddressDesc */
   def remoteAddress(): Option[InetSocketAddress]
 
   /**
@@ -153,20 +124,6 @@ abstract class AsyncSocketChannel extends AutoCloseable {
   }
 
   /**
-    * $readDesc
-    *
-    * @param dst $readDestDesc
-    * @param timeout $timeout
-    *
-    * @return $readReturnDesc
-    */
-  def readL(dst: ByteBuffer, timeout: Option[Duration] = None): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      read(dst, Callback.async(cb), timeout)
-    }
-
-  /**
     * $writeDesc
     *
     * @param src $writeSrcDesc
@@ -189,28 +146,10 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     p.future
   }
 
-  /**
-    * $writeDesc
-    *
-    * @param src $writeSrcDesc
-    * @param timeout $timeout
-    *
-    * @return $writeReturnDesc
-    */
-  def writeL(src: ByteBuffer, timeout: Option[Duration] = None): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      write(src, Callback.async(cb), timeout)
-    }
-
-  /**
-    * $stopReadingDesc
-    */
+  /** $stopReadingDesc */
   def stopReading(): Unit
 
-  /**
-    * $stopWritingDesc
-    */
+  /** $stopWritingDesc */
   def stopWriting(): Unit
 }
 
@@ -226,7 +165,7 @@ object AsyncSocketChannel {
     *
     * @param s                 is the `Scheduler` used for asynchronous computations
     *
-    * @return an [[monix.nio.tcp.AsyncSocketChannel]] instance for handling reads and writes.
+    * @return an [[monix.nio.tcp.AsyncSocketChannel AsyncSocketChannel]] instance for handling reads and writes.
     */
   def apply(
     reuseAddress: Boolean = true,
@@ -280,10 +219,8 @@ object AsyncSocketChannel {
 
     override def connect(remote: InetSocketAddress, cb: Callback[Unit]): Unit = {
       val handler = new CompletionHandler[Void, Null] {
-        override def completed(result: Void, attachment: Null) =
-          cb.onSuccess(())
-        override def failed(exc: Throwable, attachment: Null) =
-          cb.onError(exc)
+        override def completed(result: Void, attachment: Null) = cb.onSuccess(())
+        override def failed(exc: Throwable, attachment: Null) = cb.onError(exc)
       }
       asyncSocketChannel.fold(_ => (), c => try c.connect(remote, null, handler) catch {
         case NonFatal(exc) =>
@@ -307,21 +244,20 @@ object AsyncSocketChannel {
       })
     }
 
+    private[this] val completionHandler = new CompletionHandler[Integer, Callback[Int]] {
+      override def completed(result: Integer, cb: Callback[Int]): Unit = cb.onSuccess(result)
+      override def failed(exc: Throwable, cb: Callback[Int]): Unit = cb.onError(exc)
+    }
+
     override def read(dst: ByteBuffer, cb: Callback[Int], timeout: Option[Duration]): Unit = {
-      val handler = new CompletionHandler[Integer, Null] {
-        override def completed(result: Integer, attachment: Null) =
-          cb.onSuccess(result)
-        override def failed(exc: Throwable, attachment: Null) =
-          cb.onError(exc)
-      }
       asyncSocketChannel.fold(_ => (), { c =>
         try {
           c.read(
             dst,
             timeout.map(_.length).getOrElse(0l),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
-            null,
-            handler
+            cb,
+            completionHandler
           )
         } catch {
           case NonFatal(exc) =>
@@ -331,20 +267,14 @@ object AsyncSocketChannel {
     }
 
     override def write(src: ByteBuffer, cb: Callback[Int], timeout: Option[Duration]): Unit = {
-      val handler = new CompletionHandler[Integer, Null] {
-        override def completed(result: Integer, attachment: Null) =
-          cb.onSuccess(result)
-        override def failed(exc: Throwable, attachment: Null) =
-          cb.onError(exc)
-      }
       asyncSocketChannel.fold(_ => (), { c =>
         try {
           c.write(
             src,
             timeout.map(_.length).getOrElse(0l),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
-            null,
-            handler
+            cb,
+            completionHandler
           )
         } catch {
           case NonFatal(exc) =>
@@ -367,11 +297,13 @@ object AsyncSocketChannel {
       })
     }
 
-    override def close(): Unit = {
+    private[this] val cancelable: Cancelable = Cancelable { () =>
       asyncSocketChannel.fold(_ => (), c => try c.close() catch {
         case NonFatal(exc) =>
           scheduler.reportFailure(exc)
       })
     }
+    override def close(): Unit =
+      cancelable.cancel()
   }
 }

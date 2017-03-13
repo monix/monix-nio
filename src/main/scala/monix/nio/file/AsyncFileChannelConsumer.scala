@@ -20,12 +20,12 @@ package monix.nio.file
 import monix.nio.AsyncChannelConsumer
 
 final class AsyncFileChannelConsumer(
-    asyncFileChannel: AsyncFileChannel,
+    taskFileChannel: TaskFileChannel,
     startPosition: Long = 0
 ) extends AsyncChannelConsumer {
 
   override def withInitialPosition = startPosition
   override def channel = Option {
-    asyncChannelWrapper(asyncFileChannel)
+    asyncChannelWrapper(taskFileChannel)
   }
 }

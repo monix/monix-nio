@@ -1,72 +1,98 @@
 package monix.nio.tcp
 
-import java.net.InetAddress
+import java.net.{ InetAddress, InetSocketAddress }
 
 import minitest.SimpleTestSuite
 import monix.eval.{ Callback, Task }
 import monix.execution.Ack.{ Continue, Stop }
-import monix.reactive.Observable
+import monix.reactive.{ Consumer, Observable }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ Await, Future, Promise }
 
 object TcpIntegrationSpec extends SimpleTestSuite {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
 
   test("connect and read from a TCP source successfully") {
-    val p = Promise[Boolean]()
-    asyncServer(InetAddress.getByName(null).getHostName, 9000).map { asyncServerSocketChannel =>
-      val serverT = asyncServerSocketChannel.acceptL()
-        .flatMap { serverSocket =>
-          serverSocket
-            .writeL(java.nio.ByteBuffer.wrap("Hello world!".getBytes))
-            .map(_ => serverSocket.stopWriting())
-            .map(_ => asyncServerSocketChannel.close())
-        }
+    val wp = Promise[Boolean]()
+    val rp = Promise[Boolean]()
+    val data = java.nio.ByteBuffer.wrap("Hello world!".getBytes)
 
-      val clientT = Task {
+    asyncServer(InetAddress.getByName(null).getHostName, 9000).map { taskServerSocketChannel =>
+      val writeT = for {
+        conn <- taskServerSocketChannel.accept()
+        written <- conn.write(data)
+        _ <- conn.stopWriting()
+        _ <- taskServerSocketChannel.close()
+      } yield {
+        written
+      }
+
+      val readT = Task {
         val tcpObservable = readAsync("localhost", 9000, 2)
         tcpObservable.subscribe(
           (bytes: Array[Byte]) => {
             val chunk = new String(bytes, "UTF-8")
-            println(">>" + chunk)
             if (chunk.endsWith("\n")) {
-              p.success(true)
+              rp.success(true)
               Stop
             } else
               Continue
           },
-          err => p.failure(err),
-          () => p.success(true)
+          err => rp.failure(err),
+          () => rp.success(true)
         )
       }
 
-      serverT.runAsync
-      clientT.runAsync
+      writeT.runAsync(new Callback[Int] {
+        override def onError(ex: Throwable) = wp.failure(ex)
+        override def onSuccess(value: Int) = wp.success(value == data.array().length)
+      })
+      readT.runAsync
     }.runAsync
 
-    assert(Await.result(p.future, 5.seconds))
+    val result = Await.result(Future.sequence(Seq(rp.future, wp.future)), 5.seconds)
+    assert(result.forall(r => r))
   }
 
   test("write to a TCP connection successfully") {
     val data = Array.fill(8)("monix".getBytes())
     val chunkSize = 2 // very small chunks for testing
 
-    val p = Promise[Boolean]()
-    val callback = new Callback[Long] {
-      override def onSuccess(value: Long): Unit = p.success(data.flatten.length == value)
-      override def onError(ex: Throwable): Unit = p.failure(ex)
+    val recv = new StringBuilder()
+    val pw = Promise[Boolean]()
+    val callbackW = new Callback[Unit] {
+      override def onSuccess(value: Unit): Unit = pw.success(data.flatten.length == recv.length)
+      override def onError(ex: Throwable): Unit = pw.failure(ex)
     }
 
-    val tcpConsumer = writeAsync("google.com", 80)
+    val server = TaskServerSocketChannel()
+    val readT = for {
+      _ <- server.bind(new InetSocketAddress(InetAddress.getByName(null), 9000))
+      conn <- server.accept()
+      read <- readAsync(conn, chunkSize)
+        .doOnTerminateEval(_ => server.close())
+        .consumeWith(Consumer.foreach(recvBytes => recv.append(new String(recvBytes))))
+    } yield {
+      read
+    }
+    readT.runAsync(callbackW)
+
+    val pr = Promise[Boolean]()
+    val callbackR = new Callback[Long] {
+      override def onSuccess(value: Long): Unit = pr.success(data.flatten.length == value)
+      override def onError(ex: Throwable): Unit = pr.failure(ex)
+    }
+
+    val tcpConsumer = writeAsync("localhost", 9000)
     Observable
       .fromIterable(data)
       .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
       .consumeWith(tcpConsumer)
-      .runAsync(callback)
+      .runAsync(callbackR)
 
-    val result = Await.result(p.future, 5.seconds)
-    assert(result)
+    val result = Await.result(Future.sequence(Seq(pr.future, pw.future)), 5.seconds)
+    assert(result.forall(r => r))
   }
 
   test("be able to make a HTTP GET request and pipe the response back") {

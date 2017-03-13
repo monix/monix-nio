@@ -41,19 +41,19 @@ final class AsyncSocketChannelObservable private[tcp] (
 ) extends AsyncChannelObservable {
 
   private[this] val connectedSignal = Promise[Unit]()
-  private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
+  private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
 
-  private[tcp] def this(asc: AsyncSocketChannel, buffSize: Int) {
+  private[tcp] def this(tsc: TaskSocketChannel, buffSize: Int) {
     this("", 0, buffSize)
-    this.asyncSocketChannel = Option(asc)
+    this.taskSocketChannel = Option(tsc)
   }
 
-  override lazy val channel = asyncSocketChannel.map(asc => asyncChannelWrapper(asc, closeWhenDone = true))
+  override lazy val channel = taskSocketChannel.map(asc => asyncChannelWrapper(asc, closeWhenDone = true))
 
   override def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler
 
-    if (asyncSocketChannel.isDefined) {
+    if (taskSocketChannel.isDefined) {
       connectedSignal.success(())
     } else {
       val connectCallback = new Callback[Unit]() {
@@ -66,8 +66,8 @@ final class AsyncSocketChannelObservable private[tcp] (
           subscriber.onError(ex)
         }
       }
-      asyncSocketChannel = Option(AsyncSocketChannel())
-      asyncSocketChannel.foreach(_.connect(new InetSocketAddress(host, port), connectCallback))
+      taskSocketChannel = Option(TaskSocketChannel())
+      taskSocketChannel.foreach(_.connect(new InetSocketAddress(host, port)).runAsync(connectCallback))
     }
 
     connectedSignal.future

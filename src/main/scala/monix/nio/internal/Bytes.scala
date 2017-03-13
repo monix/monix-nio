@@ -24,6 +24,8 @@ private[nio] object Bytes {
     if (n < 0) EmptyBytes
     else NonEmptyBytes(bf.array().take(n))
   }
+
+  val emptyBytes = Array.empty[Byte]
 }
 private[nio] sealed trait Bytes
 private[nio] case class NonEmptyBytes(arr: Array[Byte]) extends Bytes

@@ -174,6 +174,54 @@ asyncTcpClient
   .runAsync(callbackW)
 ```
 
+### Create a TCP server and write to it
+```scala
+import java.net.{ InetAddress, InetSocketAddress }
+import monix.reactive.{ Consumer, Observable }
+import monix.eval.Callback
+import monix.nio.tcp._
+import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.duration._
+  
+implicit val ctx = monix.execution.Scheduler.Implicits.global
+  
+val data = Array.fill(8)("monix-tcp ".getBytes())
+val chunkSize = 32 // very small chunks for testing
+  
+val recv = new StringBuilder()
+val pw = Promise[Unit]()
+val callbackW = new Callback[Unit] {
+  override def onSuccess(value: Unit): Unit = { println("Received: " + recv.toString); pw.success(()) }
+  override def onError(ex: Throwable): Unit = { println(ex); pw.failure(ex) }
+}
+  
+val server = TaskServerSocketChannel()
+val readT = for {
+  _ <- server.bind(new InetSocketAddress(InetAddress.getByName(null), 9001))
+  conn <- server.accept()
+  read <- readAsync(conn, chunkSize)
+    .doOnTerminateEval(_ => server.close())
+    .consumeWith(Consumer.foreach(recvBytes => recv.append(new String(recvBytes))))
+} yield {
+  read
+}
+readT.runAsync(callbackW)
+  
+val pr = Promise[Unit]()
+val callbackR = new Callback[Long] {
+  override def onSuccess(value: Long): Unit = { println("Done writing"); pr.success(()) }
+  override def onError(ex: Throwable): Unit = pr.failure(ex)
+}
+val tcpConsumer = writeAsync("localhost", 9001)
+Observable
+  .fromIterable(data)
+  .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
+  .consumeWith(tcpConsumer)
+  .runAsync(callbackR)
+  
+Await.result(Future.sequence(Seq(pr.future, pw.future)), 5.seconds)
+```
+
 ## Maintainers
 
 The current maintainers (people who can help you) are:

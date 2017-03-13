@@ -50,7 +50,7 @@ object IntegrationTest extends SimpleTestSuite {
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
-    Files.delete(to) //clean
+    Files.delete(to) // clean
     assert(util.Arrays.equals(f1, f2))
   }
 
@@ -82,7 +82,7 @@ object IntegrationTest extends SimpleTestSuite {
 
     val f1 = Files.readAllBytes(from)
     val f2 = Files.readAllBytes(to)
-    Files.delete(to) //clean
+    Files.delete(to) // clean
 
     val all1: Seq[Byte] = strSeq.flatMap(_.getBytes) ++ f1.toSeq
     assertEquals(all1, f2.toSeq)

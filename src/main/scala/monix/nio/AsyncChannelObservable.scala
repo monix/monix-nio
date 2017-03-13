@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 
 import monix.eval.{ Callback, Task }
 import monix.execution.Ack.{ Continue, Stop }
-import monix.execution.{ Cancelable, UncaughtExceptionReporter }
+import monix.execution.{ Cancelable, Scheduler, UncaughtExceptionReporter }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignmentCancelable
 import monix.execution.exceptions.APIContractViolationException
@@ -54,6 +54,7 @@ private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte
 
   private def startReading(subscriber: Subscriber[Array[Byte]]): Cancelable = {
     import subscriber.scheduler
+
     val taskCallback = new Callback[Array[Byte]]() {
       override def onSuccess(value: Array[Byte]): Unit = {
         closeChannel()
@@ -63,7 +64,6 @@ private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte
         subscriber.onError(ex)
       }
     }
-
     val cancelable = Task
       .fromFuture(init(subscriber))
       .flatMap { _ =>
@@ -79,48 +79,33 @@ private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte
     SingleAssignmentCancelable.plusOne(extraCancelable)
   }
 
-  private def createReadTask(buff: ByteBuffer, position: Long) =
-    Task.async[Int] { (scheduler, callback) =>
-      try {
-        channel.foreach(_.read(buff, position, callback))
-      } catch {
-        case NonFatal(ex) => callback.onError(ex)
-      }
-      Cancelable(() => closeChannel()(scheduler))
-    }
-
   private[this] val buffer = ByteBuffer.allocate(bufferSize)
-  private def loop(
-    subscriber: Subscriber[Array[Byte]],
-    position: Long
-  )(implicit rep: UncaughtExceptionReporter): Task[Array[Byte]] = {
-
+  private def loop(subscriber: Subscriber[Array[Byte]], position: Long)(implicit scheduler: Scheduler): Task[Array[Byte]] = {
     buffer.clear()
-    createReadTask(buffer, position).flatMap { result =>
-      val bytes = Bytes(buffer, result)
-      bytes match {
-        case EmptyBytes =>
-          subscriber.onComplete()
-          Task.now(Array.empty)
+    channel.map { ch =>
+      ch
+        .read(buffer, position)
+        .doOnCancel(Task.defer(ch.close()))
+        .flatMap { result =>
+          val bytes = Bytes(buffer, result)
+          bytes match {
+            case EmptyBytes =>
+              subscriber.onComplete()
+              Task.now(Bytes.emptyBytes)
 
-        case NonEmptyBytes(arr) =>
-          Task.fromFuture(subscriber.onNext(arr)).flatMap {
-            case Continue =>
-              loop(subscriber, position + result)
+            case NonEmptyBytes(arr) =>
+              Task.fromFuture(subscriber.onNext(arr)).flatMap {
+                case Continue =>
+                  loop(subscriber, position + result)
 
-            case Stop =>
-              Task.now(Array.empty)
+                case Stop =>
+                  Task.now(Bytes.emptyBytes)
+              }
           }
-      }
-    }
+        }
+    }.getOrElse(Task.now(Bytes.emptyBytes))
   }
 
-  private[this] val channelOpen = Atomic(true)
-  private[nio] final def closeChannel()(implicit reporter: UncaughtExceptionReporter) =
-    try {
-      val open = channelOpen.getAndSet(false)
-      if (open) channel.foreach(_.close())
-    } catch {
-      case NonFatal(ex) => reporter.reportFailure(ex)
-    }
+  private[nio] final def closeChannel()(implicit scheduler: Scheduler) =
+    channel.foreach(_.close().runAsync)
 }

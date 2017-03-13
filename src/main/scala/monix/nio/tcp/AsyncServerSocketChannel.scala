@@ -4,8 +4,8 @@ import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.channels.spi.AsynchronousChannelProvider
 import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler }
 
-import monix.eval.{ Callback, Task }
-import monix.execution.Scheduler
+import monix.eval.Callback
+import monix.execution.{ Cancelable, Scheduler }
 import monix.nio.internal.ExecutorServiceWrapper
 
 import scala.concurrent.{ Future, Promise }
@@ -46,14 +46,11 @@ import scala.util.control.NonFatal
   *
   * @define callbackDesc is the callback to be called with the result, once
   *         this asynchronous operation is complete
-  *
   * @define acceptDesc Accepts a connection
-  *
   * @define bindDesc Binds the channel's socket to a local address and configures the socket to listen for connections
   * @define localDesc the local address to bind the socket, or null to bind to an automatically assigned socket address
   * @define backlogDesc the maximum number of pending connections. If the backlog parameter has the value 0,
   *         or a negative value, then an implementation specific default is used.
-  *
   * @define localAddressDesc Asks the socket address that this channel's socket is bound to
   */
 abstract class AsyncServerSocketChannel extends AutoCloseable {
@@ -65,23 +62,12 @@ abstract class AsyncServerSocketChannel extends AutoCloseable {
     */
   def accept(cb: Callback[AsyncSocketChannel]): Unit
 
-  /**
-    * $acceptDesc
-    */
+  /** $acceptDesc */
   def accept(): Future[AsyncSocketChannel] = {
     val p = Promise[AsyncSocketChannel]()
     accept(Callback.fromPromise(p))
     p.future
   }
-
-  /**
-    * $acceptDesc
-    */
-  def acceptL(): Task[AsyncSocketChannel] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      accept(Callback.async(cb))
-    }
 
   /**
     * $bindDesc
@@ -91,9 +77,7 @@ abstract class AsyncServerSocketChannel extends AutoCloseable {
     */
   def bind(local: InetSocketAddress, backlog: Int = 0): Unit
 
-  /**
-    * $localAddressDesc
-    */
+  /** $localAddressDesc */
   def localAddress(): Option[InetSocketAddress]
 }
 
@@ -106,7 +90,7 @@ object AsyncServerSocketChannel {
     *
     * @param s is the `Scheduler` used for asynchronous computations
     *
-    * @return an [[monix.nio.tcp.AsyncServerSocketChannel]] instance for handling connections.
+    * @return an [[monix.nio.tcp.AsyncServerSocketChannel AsyncServerSocketChannel]] instance for handling connections.
     */
   def apply(
     reuseAddress: Boolean = true,
@@ -135,14 +119,16 @@ object AsyncServerSocketChannel {
         Left(exc)
     }
 
-    override def accept(cb: Callback[AsyncSocketChannel]): Unit = {
-      val handler = new CompletionHandler[AsynchronousSocketChannel, Null] {
-        override def completed(result: AsynchronousSocketChannel, attachment: Null) =
-          cb.onSuccess(new AsyncSocketChannel.NewIOImplementation(result))
-        override def failed(exc: Throwable, attachment: Null) =
-          cb.onError(exc)
+    private[this] val acceptHandler: CompletionHandler[AsynchronousSocketChannel, Callback[AsyncSocketChannel]] = {
+      new CompletionHandler[AsynchronousSocketChannel, Callback[AsyncSocketChannel]] {
+        override def completed(result: AsynchronousSocketChannel, attachment: Callback[AsyncSocketChannel]) =
+          attachment.onSuccess(new AsyncSocketChannel.NewIOImplementation(result))
+        override def failed(exc: Throwable, attachment: Callback[AsyncSocketChannel]) =
+          attachment.onError(exc)
       }
-      asynchronousServerSocketChannel.fold(_ => (), s => try s.accept(null, handler) catch {
+    }
+    override def accept(cb: Callback[AsyncSocketChannel]): Unit = {
+      asynchronousServerSocketChannel.fold(_ => (), s => try s.accept(cb, acceptHandler) catch {
         case NonFatal(exc) =>
           cb.onError(exc)
       })
@@ -163,11 +149,13 @@ object AsyncServerSocketChannel {
       })
     }
 
-    override def close(): Unit = {
+    private[this] val cancelable: Cancelable = Cancelable { () =>
       asynchronousServerSocketChannel.fold(_ => (), c => try c.close() catch {
         case NonFatal(exc) =>
           scheduler.reportFailure(exc)
       })
     }
+    override def close(): Unit =
+      cancelable.cancel()
   }
 }

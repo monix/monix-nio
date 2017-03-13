@@ -22,7 +22,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.{ AsynchronousFileChannel, CompletionHandler }
 import java.nio.file.StandardOpenOption
 
-import monix.eval.{ Callback, Task }
+import monix.eval.Callback
 import monix.execution.{ Cancelable, Scheduler }
 import monix.nio.internal.ExecutorServiceWrapper
 
@@ -31,7 +31,6 @@ import scala.concurrent.blocking
 import scala.util.control.NonFatal
 
 /**
-  * fdsfs
   * An asynchronous channel for reading, writing, and manipulating a file.
   *
   * On the JVM this is a wrapper around
@@ -52,20 +51,16 @@ import scala.util.control.NonFatal
   *       println(s"ERROR: " + exc.getMessage)
   *   }
   * }}}
-  *
+  * @define openDesc Returns `true` if this channel is open, or `false` otherwise.
   * @define readDesc Reads a sequence of bytes from this channel into
   *         the given buffer, starting at the given file position.
-  *
   * @define readDestDesc is the buffer holding the bytes read on completion
   * @define readPositionDesc is the position in the opened channel from where to read
-  *
   * @define callbackDesc is the callback to be called with the result, once
   *         this asynchronous operation is complete
-  *
   * @define readReturnDesc the number of bytes read or -1 if the given
   *         position is greater than or equal to the file's size at the
   *         time the read is attempted.
-  *
   * @define writeDesc Writes a sequence of bytes to this channel from
   *         the given buffer, starting at the given file position.
   *
@@ -74,13 +69,10 @@ import scala.util.control.NonFatal
   *         grown to accommodate the new bytes; the values of any bytes
   *         between the previous end-of-file and the newly-written bytes
   *         are unspecified.
-  *
   * @define writeSrcDesc is the buffer holding the sequence of bytes to write
   * @define writePositionDesc is the position in file where to write,
   *         starts from 0, must be positive
-  *
   * @define writeReturnDesc the number of bytes that were written
-  *
   * @define flushDesc Forces any updates to this channel's file to be
   *         written to the storage device that contains it.
   *
@@ -96,17 +88,16 @@ import scala.util.control.NonFatal
   *         This method is only guaranteed to force changes that were
   *         made to this channel's file via the methods defined in
   *         this class.
-  *
   * @define flushWriteMetaDesc if `true` then this method is required
   *         to force changes to both the file's content and metadata
   *         to be written to storage; otherwise, it need only force
   *         content changes to be written
-  *
   * @define sizeDesc Returns the current size of this channel's file,
   *         measured in bytes.
   */
 abstract class AsyncFileChannel extends AutoCloseable {
-  /** Returns `true` if this channel is open, or `false` otherwise. */
+
+  /** $openDesc */
   def isOpen: Boolean
 
   /** $sizeDesc */
@@ -118,13 +109,6 @@ abstract class AsyncFileChannel extends AutoCloseable {
     size(Callback.fromPromise(p))
     p.future
   }
-
-  /** $sizeDesc */
-  def sizeL: Task[Long] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      size(Callback.async(cb))
-    }
 
   /**
     * $readDesc
@@ -150,20 +134,6 @@ abstract class AsyncFileChannel extends AutoCloseable {
   }
 
   /**
-    * $readDesc
-    *
-    * @param dst $readDestDesc
-    * @param position $readPositionDesc
-    *
-    * @return $readReturnDesc
-    */
-  def readL(dst: ByteBuffer, position: Long): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      read(dst, position, Callback.async(cb))
-    }
-
-  /**
     * $writeDesc
     *
     * @param src $writeSrcDesc
@@ -187,20 +157,6 @@ abstract class AsyncFileChannel extends AutoCloseable {
   }
 
   /**
-    * $writeDesc
-    *
-    * @param src $writeSrcDesc
-    * @param position $writePositionDesc
-    *
-    * @return $writeReturnDesc
-    */
-  def writeL(src: ByteBuffer, position: Long): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      write(src, position, Callback.async(cb))
-    }
-
-  /**
     * $flushDesc
     *
     * @param writeMetaData $flushWriteMetaDesc
@@ -219,17 +175,6 @@ abstract class AsyncFileChannel extends AutoCloseable {
     flush(writeMetaData, Callback.fromPromise(p))
     p.future
   }
-
-  /**
-    * $flushDesc
-    *
-    * @param writeMetaData $flushWriteMetaDesc
-    */
-  def flushL(writeMetaData: Boolean): Task[Unit] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      flush(writeMetaData, Callback.async(cb))
-    }
 }
 
 object AsyncFileChannel {
@@ -264,8 +209,9 @@ object AsyncFileChannel {
 
     private[this] val cancelable: Cancelable =
       Cancelable { () =>
-        try underlying.close()
-        catch { case NonFatal(ex) => scheduler.reportFailure(ex) }
+        try underlying.close() catch {
+          case NonFatal(ex) => scheduler.reportFailure(ex)
+        }
       }
     override def close(): Unit =
       cancelable.cancel()
@@ -288,8 +234,7 @@ object AsyncFileChannel {
       require(position >= 0, "position >= 0")
       require(!dst.isReadOnly, "!dst.isReadOnly")
       try {
-        // Can throw NonReadableChannelException
-        underlying.read(dst, position, cb, completionHandler)
+        underlying.read(dst, position, cb, completionHandler) // Can throw NonReadableChannelException
       } catch {
         case NonFatal(ex) =>
           cb.onError(ex)

@@ -156,7 +156,6 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val callbackErrorCalled = Atomic(false)
     val callback = new Callback[Long] {
       override def onSuccess(value: Long): Unit = ()
-
       override def onError(ex: Throwable): Unit = callbackErrorCalled.set(true)
     }
     reader.consumeWith(consumer).runAsync(callback)
@@ -170,7 +169,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     //next write will create an exception
     writeChannel.createWriteException()
-    tick(3)
+    tick(5)
     assertEquals(callbackErrorCalled.get, true)
     assertEquals(readChannel.getBytesReadPosition, 2)
     assertEquals(writeChannel.getBytesWritePosition, 1)

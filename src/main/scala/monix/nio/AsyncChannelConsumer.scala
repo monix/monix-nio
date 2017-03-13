@@ -47,18 +47,22 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
         val promise = Promise[Ack]()
         channel.foreach { sc =>
           try {
-            sc.write(ByteBuffer.wrap(elem), position, new Callback[Int] {
-              override def onError(exc: Throwable) = {
-                closeChannel()
-                sendError(exc)
-                promise.success(Stop)
-              }
+            sc
+              .write(ByteBuffer.wrap(elem), position)
+              .runAsync(
+                new Callback[Int] {
+                  override def onError(exc: Throwable) = {
+                    closeChannel()
+                    sendError(exc)
+                    promise.success(Stop)
+                  }
 
-              override def onSuccess(result: Int): Unit = {
-                position += result
-                promise.success(Continue)
-              }
-            })
+                  override def onSuccess(result: Int): Unit = {
+                    position += result
+                    promise.success(Continue)
+                  }
+                }
+              )
           } catch {
             case NonFatal(ex) =>
               sendError(ex)
@@ -77,7 +81,7 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
     }
 
     override def onComplete(): Unit = {
-      channel.collect { case sc if sc.closeOnComplete() => closeChannel() }
+      channel.collect { case sc if sc.closeOnComplete => closeChannel() }
       if (callbackCalled.compareAndSet(expect = false, update = true))
         consumerCallback.onSuccess(position)
     }
@@ -88,22 +92,19 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
     }
 
     private[nio] def onCancel(): Unit = {
-      callbackCalled.set(true) // the callback should not be called after cancel
-      channel.collect { case sc if sc.closeOnComplete() => closeChannel() }
+      callbackCalled.set(true) /* the callback should not be called after cancel */
+      channel.collect { case sc if sc.closeOnComplete => closeChannel() }
     }
 
-    private[nio] def sendError(t: Throwable) = if (callbackCalled.compareAndSet(expect = false, update = true))
-      scheduler.execute(new Runnable { def run() = consumerCallback.onError(t) })
-
-    private[this] val channelOpen = Atomic(true)
-    private[nio] final def closeChannel()(implicit reporter: UncaughtExceptionReporter) = {
-      try {
-        val open = channelOpen.getAndSet(false)
-        if (open) channel.foreach(_.close())
-      } catch {
-        case NonFatal(ex) => reporter.reportFailure(ex)
+    private[nio] def sendError(t: Throwable) =
+      if (callbackCalled.compareAndSet(expect = false, update = true)) {
+        scheduler.execute(new Runnable {
+          def run() = consumerCallback.onError(t)
+        })
       }
-    }
+
+    private[nio] final def closeChannel()(implicit scheduler: Scheduler) =
+      channel.foreach(_.close().runAsync)
   }
 
   override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {

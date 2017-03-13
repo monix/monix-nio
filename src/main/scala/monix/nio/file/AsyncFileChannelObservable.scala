@@ -20,12 +20,12 @@ package monix.nio.file
 import monix.nio.AsyncChannelObservable
 
 final class AsyncFileChannelObservable(
-    asyncFileChannel: AsyncFileChannel,
+    taskFileChannel: TaskFileChannel,
     size: Int
 ) extends AsyncChannelObservable {
 
   override def bufferSize = size
   override def channel = Option {
-    asyncChannelWrapper(asyncFileChannel)
+    asyncChannelWrapper(taskFileChannel)
   }
 }

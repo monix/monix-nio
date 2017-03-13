@@ -34,22 +34,22 @@ import scala.concurrent.Promise
   * @param port TCP port number
   */
 final class AsyncSocketChannelConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer {
-  private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
+  private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
   private[this] var closeOnComplete = true
 
-  private[tcp] def this(asc: AsyncSocketChannel, closeWhenDone: Boolean) {
+  private[tcp] def this(tsc: TaskSocketChannel, closeWhenDone: Boolean) {
     this("", 0)
-    this.asyncSocketChannel = Option(asc)
+    this.taskSocketChannel = Option(tsc)
     this.closeOnComplete = closeWhenDone
   }
 
-  override lazy val channel = asyncSocketChannel.map(asc => asyncChannelWrapper(asc, closeOnComplete))
+  override lazy val channel = taskSocketChannel.map(tsc => asyncChannelWrapper(tsc, closeOnComplete))
 
   override def init(subscriber: AsyncChannelSubscriber) = {
     import subscriber.scheduler
 
     val connectedPromise = Promise[Unit]()
-    if (asyncSocketChannel.isDefined) {
+    if (taskSocketChannel.isDefined) {
       connectedPromise.success(())
     } else {
       val connectCallback = new Callback[Unit]() {
@@ -62,8 +62,8 @@ final class AsyncSocketChannelConsumer private[tcp] (host: String, port: Int) ex
           subscriber.onError(ex)
         }
       }
-      asyncSocketChannel = Option(AsyncSocketChannel())
-      asyncSocketChannel.foreach(_.connect(new InetSocketAddress(host, port), connectCallback))
+      taskSocketChannel = Option(TaskSocketChannel())
+      taskSocketChannel.foreach(_.connect(new InetSocketAddress(host, port)).runAsync(connectCallback))
     }
 
     connectedPromise.future

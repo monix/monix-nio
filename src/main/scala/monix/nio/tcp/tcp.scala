@@ -19,7 +19,6 @@ package monix.nio
 
 import java.nio.ByteBuffer
 
-import monix.eval.Callback
 import monix.execution.Scheduler
 
 package object tcp {
@@ -39,6 +38,21 @@ package object tcp {
     new AsyncSocketChannelObservable(host, port, bufferSize)
 
   /**
+    * Returns a TCP socket [[monix.reactive.Observable Observable]] that can be subscribed to
+    * in order to read the incoming bytes asynchronously.
+    * It will close the socket on end-of-stream, signalling [[monix.execution.Ack.Stop Stop]]
+    * after subscription or by cancelling it directly
+    *
+    * @param taskSocketChannel the underlying [[monix.nio.tcp.TaskSocketChannel TaskSocketChannel]]
+    * @param bufferSize the size of the buffer used for reading
+    *
+    * @return an [[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]]
+    */
+  def readAsync(taskSocketChannel: TaskSocketChannel, bufferSize: Int) = {
+    new AsyncSocketChannelObservable(taskSocketChannel, bufferSize)
+  }
+
+  /**
     * Returns a TCP socket [[monix.reactive.Consumer Consumer]] that can be used
     * to send data asynchronously from an [[monix.reactive.Observable Observable]].
     * The underlying socket will be closed when the
@@ -53,6 +67,19 @@ package object tcp {
     new AsyncSocketChannelConsumer(host, port)
 
   /**
+    * Returns a TCP socket [[monix.reactive.Consumer Consumer]] that can be used
+    * to send data asynchronously from an [[monix.reactive.Observable Observable]].
+    * The underlying socket will be closed when the
+    * [[monix.reactive.Observable Observable]] ends
+    *
+    * @param taskSocketChannel the underlying [[monix.nio.tcp.TaskSocketChannel TaskSocketChannel]]
+    *
+    * @return an [[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]
+    */
+  def writeAsync(taskSocketChannel: TaskSocketChannel) =
+    new AsyncSocketChannelConsumer(taskSocketChannel, closeWhenDone = true)
+
+  /**
     * Creates a TCP client - an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
     * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
     * that both are using the same underlying socket.
@@ -63,36 +90,38 @@ package object tcp {
     * @param host hostname
     * @param port TCP port number
     * @param bufferSize the size of the buffer used for reading
-    * @return an [[monix.nio.tcp.AsyncTcpClient AsyncTcpClient]]
+    * @return an [[monix.nio.tcp.AsyncSocketChannelClient AsyncSocketChannelClient]]
     */
   def readWriteAsync(
     host: String,
     port: Int,
     bufferSize: Int = 256 * 1024
-  )(implicit scheduler: Scheduler): AsyncTcpClient = AsyncTcpClient(host, port, bufferSize)
+  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = AsyncSocketChannelClient(host, port, bufferSize)
 
   /**
     * Creates a TCP server
     *
     * @param host hostname
     * @param port TCP port number
-    * @return an [[monix.nio.tcp.AsyncTcpServer AsyncTcpServer]]
+    * @return a bound [[monix.nio.tcp.TaskServerSocketChannel TaskServerSocketChannel]]
     */
   def asyncServer(
     host: String,
     port: Int
-  )(implicit scheduler: Scheduler) = AsyncTcpServer(host, port).tcpServer
+  )(implicit scheduler: Scheduler) = {
 
-  private[tcp] def asyncChannelWrapper(asyncSocketChannel: AsyncSocketChannel, closeWhenDone: Boolean) = new AsyncChannel {
-    override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
-      asyncSocketChannel.read(dst, callback)
-
-    override def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
-      asyncSocketChannel.write(b, callback)
-
-    override def close(): Unit =
-      asyncSocketChannel.close()
-
-    override def closeOnComplete(): Boolean = closeWhenDone
+    val server = TaskServerSocketChannel()
+    server
+      .bind(new java.net.InetSocketAddress(host, port))
+      .map(_ => server)
   }
+
+  private[tcp] def asyncChannelWrapper(taskSocketChannel: TaskSocketChannel, closeWhenDone: Boolean) =
+    new AsyncChannel {
+      override val closeOnComplete = closeWhenDone
+
+      override def read(dst: ByteBuffer, position: Long) = taskSocketChannel.read(dst)
+      override def write(b: ByteBuffer, position: Long) = taskSocketChannel.write(b)
+      override def close() = taskSocketChannel.close()
+    }
 }
