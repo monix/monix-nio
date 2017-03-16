@@ -126,10 +126,58 @@ Observable
   .runAsync(callback)
 ```
 
-### Make a raw HTTP request
-```commandline
-$ tail -f conn.txt | nc -l -k 9000 > conn.txt
+### Create a TCP server and/or client (TCP server-client echo example)
+```scala
+import monix.reactive.Observable
+import monix.eval. { Callback, Task }
+import monix.execution.Ack.Continue
+import monix.nio.tcp._
+  
+implicit val ctx = monix.execution.Scheduler.Implicits.global
+  
+val echoT = for {
+  server <- asyncServer(java.net.InetAddress.getByName(null).getHostName, 9001)
+  socket <- server.accept()
+  
+  conn <- Task.now(readWriteAsync(socket))
+  reader <- conn.tcpObservable
+  writer <- conn.tcpConsumer
+  
+  echoedLen <- reader.doOnTerminateEval(_ => conn.stopWriting()).consumeWith(writer)
+  _ <- conn.close()
+  _ <- server.close()
+} yield {
+  echoedLen
+}
+echoT.runAsync(new Callback[Long] {
+  override def onSuccess(value: Long): Unit = println(s"Echoed $value bytes.")
+  override def onError(ex: Throwable): Unit = println(ex)
+})
+  
+val client = readWriteAsync("localhost", 9001, 256 * 1024)
+val writeT = for {
+  writer <- client.tcpConsumer
+  _ <- Observable.fromIterable(Array("Hello world!".getBytes())).consumeWith(writer)
+  _ <- client.stopWriting()
+} yield {}
+val readT = for {
+  reader <- client.tcpObservable
+  _ <- Task.now(reader
+    .doOnTerminateEval(_ => client.close())
+    .subscribe(
+      bytes => { 
+        println(new String(bytes))
+        Continue 
+      },
+      err => println(err),
+      () => println("Echo received.")
+    ))
+} yield {}
+// start writing to the server and read the back echo
+writeT.flatMap(_ => readT).runAsync
 ```
+
+### Make a raw HTTP request
 ```scala
 import monix.reactive.Observable
 import monix.eval.Callback
@@ -137,7 +185,7 @@ import monix.nio.tcp._
   
 implicit val ctx = monix.execution.Scheduler.Implicits.global
   
-val asyncTcpClient = readWriteAsync("httpbin.org", 80, 256 * 1024) // or use localhost:9000
+val asyncTcpClient = readWriteAsync("httpbin.org", 80, 256 * 1024)
 val request = 
   "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
    
@@ -175,46 +223,6 @@ asyncTcpClient
       .consumeWith(writer)
   }
   .runAsync(callbackW)
-```
-
-### Create a TCP server and write to it
-```scala
-import java.net.{ InetAddress, InetSocketAddress }
-import monix.reactive.{ Consumer, Observable }
-import monix.eval.Callback
-import monix.nio.tcp._
-import scala.concurrent.{ Await, Future, Promise }
-import scala.concurrent.duration._
-  
-implicit val ctx = monix.execution.Scheduler.Implicits.global
-  
-val data = Array.fill(8)("monix-tcp ".getBytes())
-val chunkSize = 32 // very small chunks for testing
-  
-val recv = new StringBuilder()
-val callback = new Callback[Unit] {
-  override def onSuccess(value: Unit): Unit = println("Received: " + recv.toString)
-  override def onError(ex: Throwable): Unit = println(ex)
-}
-  
-val server = TaskServerSocketChannel()
-val readT = for {
-  _ <- server.bind(new InetSocketAddress(InetAddress.getByName(null), 9001))
-  conn <- server.accept()
-  read <- readAsync(conn, chunkSize)
-    .doOnTerminateEval(_ => server.close())
-    .consumeWith(Consumer.foreach(recvBytes => recv.append(new String(recvBytes))))
-} yield {
-  read
-}
-readT.runAsync(callback)
-  
-val tcpConsumer = writeAsync("localhost", 9001)
-Observable
-  .fromIterable(data)
-  .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
-  .consumeWith(tcpConsumer)
-  .runAsync
 ```
 
 ## Maintainers

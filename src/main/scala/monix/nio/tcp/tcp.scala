@@ -82,7 +82,7 @@ package object tcp {
   /**
     * Creates a TCP client - an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
     * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
-    * that both are using the same underlying socket.
+    * that both use the same underlying socket that is not released automatically.
     *
     * In order to release the connection use [[monix.nio.tcp.AsyncSocketChannelClient#close() close()]]
     *
@@ -104,7 +104,7 @@ package object tcp {
   /**
     * Creates a TCP client - an async reader([[monix.nio.tcp.AsyncSocketChannelObservable AsyncSocketChannelObservable]])
     * and an async writer([[monix.nio.tcp.AsyncSocketChannelConsumer AsyncSocketChannelConsumer]]) pair
-    * that both are using the same underlying socket.
+    * that both use the same underlying socket that is not released automatically.
     *
     * In order to release the connection use [[monix.nio.tcp.AsyncSocketChannelClient#close() close()]]
     *

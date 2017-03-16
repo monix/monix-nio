@@ -106,7 +106,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
             conn <- Task.now(readWriteAsync(tsc))
             reader <- conn.tcpObservable
             writer <- conn.tcpConsumer
-            written <- reader.doOnTerminate(_ => { conn.stopWriting() }).consumeWith(writer)
+            written <- reader.doOnTerminateEval(_ => conn.stopWriting()).consumeWith(writer)
             _ <- conn.close()
           } yield {
             written
@@ -128,7 +128,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
           val readT = for {
             reader <- client.tcpObservable
             _ <- Task.now(reader
-              .doOnTerminate(_ => client.close())
+              .doOnTerminateEval(_ => client.close())
               .subscribe(
                 bytes => { echo.append(new String(bytes)); Continue },
                 err => rp.failure(err),
