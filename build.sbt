@@ -1,6 +1,9 @@
 import com.typesafe.sbt.pgp.PgpKeys
 import scala.xml.Elem
 import scala.xml.transform.{RewriteRule, RuleTransformer}
+import com.typesafe.sbt.SbtScalariform
+import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+import scalariform.formatter.preferences._
 
 val monixVersion = "2.2.3"
 val appSettings = Seq(
@@ -165,6 +168,11 @@ val appSettings = Seq(
         <name>Alexandru Nedelcu</name>
         <url>https://alexn.org</url>
       </developer>
+      <developer>
+        <id>radusw</id>
+        <name>Radu Gancea</name>
+        <url>https://github.com/radusw</url>
+      </developer>
     </developers>
 )
 
@@ -176,8 +184,13 @@ def profile: Project ⇒ Project = pr => cmdlineProfile match {
   case _ => pr.disablePlugins(scoverage.ScoverageSbtPlugin)
 }
 
+val formattingSettings = SbtScalariform.scalariformSettings ++ Seq(
+  ScalariformKeys.preferences := ScalariformKeys.preferences.value
+    .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
+)
+
 val monixNio = Project(id = "monix-nio", base = file("."))
   .settings(appSettings)
-  .settings(scalariformSettings)
+  .settings(formattingSettings)
   .configure(profile)
 

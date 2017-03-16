@@ -19,47 +19,55 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 
-import monix.eval.Callback
+import monix.eval.{ Callback, Task }
 import monix.nio.AsyncChannelConsumer
 
 import scala.concurrent.Promise
-import scala.util.control.NonFatal
 
-final class AsyncSocketChannelConsumer private[tcp] (host: String, port: Int) extends AsyncChannelConsumer {
-  private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
+/**
+  * A TCP socket [[monix.reactive.Consumer Consumer]] that can be used
+  * to send data asynchronously from an [[monix.reactive.Observable Observable]].
+  * The underlying socket will be closed when the
+  * [[monix.reactive.Observable Observable]] ends
+  *
+  * @param host hostname
+  * @param port TCP port number
+  */
+final class AsyncSocketChannelConsumer private[tcp] (
+    host: String,
+    port: Int
+) extends AsyncChannelConsumer {
 
-  private[tcp] def this(asc: AsyncSocketChannel) {
-    this(asc.socketAddress.getHostString, asc.socketAddress.getPort)
-    this.asyncSocketChannel = Option(asc)
+  private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
+  private[this] var closeOnComplete = true
+
+  private[tcp] def this(tsc: TaskSocketChannel, closeWhenDone: Boolean) {
+    this("", 0)
+    this.taskSocketChannel = Option(tsc)
+    this.closeOnComplete = closeWhenDone
   }
 
-  override def channel = asyncSocketChannel.map(asyncChannelWrapper)
+  override lazy val channel = taskSocketChannel.map(tsc => asyncChannelWrapper(tsc, closeOnComplete))
 
   override def init(subscriber: AsyncChannelSubscriber) = {
     import subscriber.scheduler
 
     val connectedPromise = Promise[Unit]()
-    val connectCallback = new Callback[Void]() {
-      override def onSuccess(value: Void): Unit = {
-        connectedPromise.success(())
+    if (taskSocketChannel.isDefined) {
+      connectedPromise.success(())
+    } else {
+      val connectCallback = new Callback[Unit]() {
+        override def onSuccess(value: Unit): Unit = {
+          connectedPromise.success(())
+        }
+        override def onError(ex: Throwable): Unit = {
+          connectedPromise.failure(ex)
+          subscriber.closeChannel()
+          subscriber.onError(ex)
+        }
       }
-      override def onError(ex: Throwable): Unit = {
-        connectedPromise.failure(ex)
-        subscriber.closeChannel()
-        subscriber.onError(ex)
-      }
-    }
-
-    try {
-      if (asyncSocketChannel.isDefined) {
-        connectedPromise.success(())
-      } else {
-        asyncSocketChannel = Option(AsyncSocketChannel(new InetSocketAddress(host, port)))
-        asyncSocketChannel.foreach(_.connect(connectCallback))
-      }
-    } catch {
-      case NonFatal(ex) =>
-        subscriber.sendError(ex)
+      taskSocketChannel = Option(TaskSocketChannel())
+      taskSocketChannel.foreach(_.connect(new InetSocketAddress(host, port)).runAsync(connectCallback))
     }
 
     connectedPromise.future

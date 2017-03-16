@@ -25,31 +25,41 @@ import monix.reactive.observers.Subscriber
 
 import scala.concurrent.Promise
 
+/**
+  * A TCP socket [[monix.reactive.Observable Observable]] that can be subscribed to
+  * in order to read the incoming bytes asynchronously.
+  * The underlying socket is closed on `end-of-stream`, on signalling [[monix.execution.Ack.Stop Stop]]
+  * after subscription or by cancelling it directly
+  *
+  * @param host hostname
+  * @param port TCP port number
+  * @param bufferSize the size of the buffer used for reading
+  */
 final class AsyncSocketChannelObservable private[tcp] (
     host: String, port: Int,
-    buffSize: Int = 256 * 1024
+    override val bufferSize: Int = 256 * 1024
 ) extends AsyncChannelObservable {
 
-  override def bufferSize = buffSize
-
   private[this] val connectedSignal = Promise[Unit]()
-  private[this] var asyncSocketChannel: Option[AsyncSocketChannel] = None
+  private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
+  private[this] var closeOnComplete = true
 
-  private[tcp] def this(asc: AsyncSocketChannel, buffSize: Int) {
-    this(asc.socketAddress.getHostString, asc.socketAddress.getPort, buffSize)
-    this.asyncSocketChannel = Option(asc)
+  private[tcp] def this(tsc: TaskSocketChannel, buffSize: Int, closeWhenDone: Boolean) {
+    this("", 0, buffSize)
+    this.taskSocketChannel = Option(tsc)
+    this.closeOnComplete = closeWhenDone
   }
 
-  override def channel = asyncSocketChannel.map(asyncChannelWrapper)
+  override lazy val channel = taskSocketChannel.map(asc => asyncChannelWrapper(asc, closeOnComplete))
 
   override def init(subscriber: Subscriber[Array[Byte]]) = {
     import subscriber.scheduler
-    if (asyncSocketChannel.isDefined) {
+
+    if (taskSocketChannel.isDefined) {
       connectedSignal.success(())
     } else {
-      asyncSocketChannel = Option(AsyncSocketChannel(new InetSocketAddress(host, port)))
-      val connectCallback = new Callback[Void]() {
-        override def onSuccess(value: Void): Unit = {
+      val connectCallback = new Callback[Unit]() {
+        override def onSuccess(value: Unit): Unit = {
           connectedSignal.success(())
         }
         override def onError(ex: Throwable): Unit = {
@@ -58,8 +68,8 @@ final class AsyncSocketChannelObservable private[tcp] (
           subscriber.onError(ex)
         }
       }
-
-      asyncSocketChannel.foreach(_.connect(connectCallback))
+      taskSocketChannel = Option(TaskSocketChannel())
+      taskSocketChannel.foreach(_.connect(new InetSocketAddress(host, port)).runAsync(connectCallback))
     }
 
     connectedSignal.future

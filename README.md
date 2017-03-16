@@ -137,7 +137,7 @@ import monix.nio.tcp._
   
 implicit val ctx = monix.execution.Scheduler.Implicits.global
   
-val asyncTcpClient = readWriteAsync("httpbin.org", 80) // or use localhost:9000
+val asyncTcpClient = readWriteAsync("httpbin.org", 80, 256 * 1024) // or use localhost:9000
 val request = 
   "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
    
@@ -148,13 +148,16 @@ val callbackR = new Callback[Unit] {
 asyncTcpClient
   .tcpObservable
   .map { reader =>
-    reader.subscribe(
+    reader
+    .doOnTerminateEval(_ => asyncTcpClient.close()) // clean
+    .subscribe(
       (bytes: Array[Byte]) => {
         println(new String(bytes, "UTF-8"))
-        monix.execution.Ack.Stop // closes the socket
+        monix.execution.Ack.Stop 
       },
       err => println(err),
-      () => println("Completed"))
+      () => println("Completed")
+    )
     ()
   }
   .runAsync(callbackR)
@@ -172,6 +175,46 @@ asyncTcpClient
       .consumeWith(writer)
   }
   .runAsync(callbackW)
+```
+
+### Create a TCP server and write to it
+```scala
+import java.net.{ InetAddress, InetSocketAddress }
+import monix.reactive.{ Consumer, Observable }
+import monix.eval.Callback
+import monix.nio.tcp._
+import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.duration._
+  
+implicit val ctx = monix.execution.Scheduler.Implicits.global
+  
+val data = Array.fill(8)("monix-tcp ".getBytes())
+val chunkSize = 32 // very small chunks for testing
+  
+val recv = new StringBuilder()
+val callback = new Callback[Unit] {
+  override def onSuccess(value: Unit): Unit = println("Received: " + recv.toString)
+  override def onError(ex: Throwable): Unit = println(ex)
+}
+  
+val server = TaskServerSocketChannel()
+val readT = for {
+  _ <- server.bind(new InetSocketAddress(InetAddress.getByName(null), 9001))
+  conn <- server.accept()
+  read <- readAsync(conn, chunkSize)
+    .doOnTerminateEval(_ => server.close())
+    .consumeWith(Consumer.foreach(recvBytes => recv.append(new String(recvBytes))))
+} yield {
+  read
+}
+readT.runAsync(callback)
+  
+val tcpConsumer = writeAsync("localhost", 9001)
+Observable
+  .fromIterable(data)
+  .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
+  .consumeWith(tcpConsumer)
+  .runAsync
 ```
 
 ## Maintainers

@@ -20,14 +20,13 @@ package monix.nio
 import java.nio.ByteBuffer
 import java.nio.file.{ Path, StandardOpenOption }
 
-import monix.eval.Callback
 import monix.execution.Scheduler
 
 package object file {
   def readAsync(path: Path, chunkSize: Int)(implicit s: Scheduler): AsyncFileChannelObservable = {
     require(chunkSize > 1)
 
-    val channel = AsyncFileChannel(path.toFile, StandardOpenOption.READ)
+    val channel = TaskFileChannel(path.toFile, StandardOpenOption.READ)
     new AsyncFileChannelObservable(channel, chunkSize)
   }
 
@@ -46,20 +45,15 @@ package object file {
   )(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
     val flagsWithWriteOptions = flags :+ StandardOpenOption.WRITE :+ StandardOpenOption.CREATE
-    val channel = AsyncFileChannel(path.toFile, flagsWithWriteOptions: _*)
+    val channel = TaskFileChannel(path.toFile, flagsWithWriteOptions: _*)
     new AsyncFileChannelConsumer(channel, startPosition)
   }
 
-  private[file] def asyncChannelWrapper(asyncFileChannel: AsyncFileChannel) = new AsyncChannel {
-    override def read(dst: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
-      asyncFileChannel.read(dst, position, callback)
+  private[file] def asyncChannelWrapper(taskFileChannel: TaskFileChannel) = new AsyncChannel {
+    override val closeOnComplete: Boolean = true
 
-    override def write(b: ByteBuffer, position: Long, callback: Callback[Int]): Unit =
-      asyncFileChannel.write(b, position, callback)
-
-    override def close(): Unit =
-      asyncFileChannel.close()
-
-    override def closeOnComplete(): Boolean = true
+    override def read(dst: ByteBuffer, position: Long) = taskFileChannel.read(dst, position)
+    override def write(b: ByteBuffer, position: Long) = taskFileChannel.write(b, position)
+    override def close() = taskFileChannel.close()
   }
 }

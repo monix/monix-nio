@@ -28,11 +28,11 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContextExecutorService }
 
 /**
- * Wraps a Monix `Scheduler` into a Java `ExecutorService`.
- *
- * Can work with Monix's `SchedulerService` in order to provide
- * `shutdown` operations, however this is optional.
- */
+  * Wraps a Monix `Scheduler` into a Java `ExecutorService`.
+  *
+  * Can work with Monix's `SchedulerService` in order to provide
+  * `shutdown` operations, however this is optional.
+  */
 private[nio] final class ExecutorServiceWrapper(scheduler: Scheduler)
     extends AbstractExecutorService with ExecutionContextExecutorService {
 
@@ -81,10 +81,10 @@ private[nio] object ExecutorServiceWrapper {
     new ExecutorServiceWrapper(s)
 
   /**
-   * `Scheduler` instance that executes `Runnables` immediately,
-   * used when blocking in [[ExecutorServiceWrapper.awaitTermination]],
-   * in order to avoid initializing an actual `Scheduler`.
-   */
+    * `Scheduler` instance that executes `Runnables` immediately,
+    * used when blocking in [[ExecutorServiceWrapper.awaitTermination]],
+    * in order to avoid initializing an actual `Scheduler`.
+    */
   private val currentThread: Scheduler =
     new ReferenceScheduler {
       import monix.execution.Scheduler.global
