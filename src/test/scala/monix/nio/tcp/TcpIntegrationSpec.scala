@@ -95,8 +95,8 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     assert(result.forall(r => r))
   }
 
-  test("server - handle 5000 clients (echo test)") {
-    val noOfClients = 5000
+  test("server - handle 100 clients (echo test)") {
+    val noOfClients = 100
     val program = asyncServer(InetAddress.getByName(null).getHostName, 9000).flatMap { taskServerSocketChannel =>
       val handlers = Observable
         .fromIterable(1 to noOfClients)
