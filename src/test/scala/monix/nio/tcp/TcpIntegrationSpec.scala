@@ -5,6 +5,7 @@ import java.net.{ InetAddress, InetSocketAddress }
 import minitest.SimpleTestSuite
 import monix.eval.{ Callback, Task }
 import monix.execution.Ack.{ Continue, Stop }
+import monix.execution.atomic.Atomic
 import monix.reactive.{ Consumer, Observable }
 
 import scala.concurrent.duration._
@@ -95,12 +96,13 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     assert(result.forall(r => r))
   }
 
-  test("server - handle 100 clients (echo test)") {
-    val noOfClients = 100
+  test("the TCP server should handle 1000 clients, 16 at a time, by echoing back the received message correctly") {
+    val echoed = Atomic(true)
+    val noOfClients = 1000
     val program = asyncServer(InetAddress.getByName(null).getHostName, 9000).flatMap { taskServerSocketChannel =>
       val handlers = Observable
         .fromIterable(1 to noOfClients)
-        .map(_ => Await.result(taskServerSocketChannel.accept().runAsync, 500.millis))
+        .mapTask(_ => taskServerSocketChannel.accept())
         .mapAsync(4) { tsc =>
           for {
             conn <- Task.now(readWriteAsync(tsc))
@@ -115,15 +117,16 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
       val clients = Observable
         .fromIterable(1 to noOfClients)
-        .mapAsync(8) { i =>
+        .mapAsync(16) { i =>
           val client = readWriteAsync("localhost", 9000, 8)
-          val data = s"Hello Monix - $i!".getBytes.grouped(3).toArray
+          val msg = s"Hello Monix - $i!"
+          val data = msg.getBytes.grouped(3).toArray
           // writing
           val writeT = client.tcpConsumer.flatMap { writer =>
-            Observable.fromIterable(data).consumeWith(writer).flatMap(len => client.stopWriting().map(_ => len))
+            Observable.fromIterable(data).consumeWith(writer).flatMap(_ => client.stopWriting())
           }
           // reading the echo
-          val rp = Promise[String]()
+          val rp = Promise[Boolean]()
           val echo = new StringBuilder()
           val readT = for {
             reader <- client.tcpObservable
@@ -132,7 +135,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
               .subscribe(
                 bytes => { echo.append(new String(bytes)); Continue },
                 err => rp.failure(err),
-                () => rp.success(echo.toString())
+                () => rp.success(echo.toString() == msg)
               ))
           } yield {}
           writeT.flatMap(_ => readT.flatMap(_ => Task.fromFuture(rp.future)))
@@ -148,11 +151,14 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
       Task {
         clients.subscribe(
-          _ => Continue,
+          r => {
+            echoed.compareAndSet(expect = true, update = r)
+            Continue
+          },
           err => doneP.failure(err),
           () => {
             taskServerSocketChannel.close()
-            doneP.success(true)
+            doneP.success(echoed.get)
           }
         )
       }.runAsync
