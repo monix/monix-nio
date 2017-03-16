@@ -21,11 +21,10 @@ import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.ByteBuffer
 import java.nio.channels.spi.AsynchronousChannelProvider
 import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousSocketChannel, CompletionHandler }
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ Executors, TimeUnit }
 
 import monix.eval.Callback
 import monix.execution.{ Cancelable, Scheduler }
-import monix.nio.internal.ExecutorServiceWrapper
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Future, Promise }
@@ -178,6 +177,19 @@ object AsyncSocketChannel {
     NewIOImplementation(reuseAddress, sendBufferSize, receiveBufferSize, keepAlive, noDelay)
   }
 
+  private lazy val acg =
+    AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), -1)
+
+  private val connectHandler = new CompletionHandler[Void, Callback[Unit]] {
+    override def completed(result: Void, cb: Callback[Unit]) = cb.onSuccess(())
+    override def failed(exc: Throwable, cb: Callback[Unit]) = cb.onError(exc)
+  }
+
+  private[this] val rwHandler = new CompletionHandler[Integer, Callback[Int]] {
+    override def completed(result: Integer, cb: Callback[Int]): Unit = cb.onSuccess(result)
+    override def failed(exc: Throwable, cb: Callback[Int]): Unit = cb.onError(exc)
+  }
+
   private[tcp] final case class NewIOImplementation(
       reuseAddress: Boolean = true,
       sendBufferSize: Int = 256 * 1024,
@@ -200,8 +212,7 @@ object AsyncSocketChannel {
 
         case None =>
           try {
-            val ag = AsynchronousChannelGroup.withThreadPool(ExecutorServiceWrapper(scheduler))
-            val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(ag)
+            val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(acg)
 
             ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
             ch.setOption[Integer](StandardSocketOptions.SO_SNDBUF, sendBufferSize)
@@ -218,11 +229,7 @@ object AsyncSocketChannel {
       }
 
     override def connect(remote: InetSocketAddress, cb: Callback[Unit]): Unit = {
-      val handler = new CompletionHandler[Void, Null] {
-        override def completed(result: Void, attachment: Null) = cb.onSuccess(())
-        override def failed(exc: Throwable, attachment: Null) = cb.onError(exc)
-      }
-      asyncSocketChannel.fold(_ => (), c => try c.connect(remote, null, handler) catch {
+      asyncSocketChannel.fold(_ => (), c => try c.connect(remote, cb, connectHandler) catch {
         case NonFatal(exc) =>
           cb.onError(exc)
       })
@@ -244,11 +251,6 @@ object AsyncSocketChannel {
       })
     }
 
-    private[this] val completionHandler = new CompletionHandler[Integer, Callback[Int]] {
-      override def completed(result: Integer, cb: Callback[Int]): Unit = cb.onSuccess(result)
-      override def failed(exc: Throwable, cb: Callback[Int]): Unit = cb.onError(exc)
-    }
-
     override def read(dst: ByteBuffer, cb: Callback[Int], timeout: Option[Duration]): Unit = {
       asyncSocketChannel.fold(_ => (), { c =>
         try {
@@ -257,7 +259,7 @@ object AsyncSocketChannel {
             timeout.map(_.length).getOrElse(0l),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
             cb,
-            completionHandler
+            rwHandler
           )
         } catch {
           case NonFatal(exc) =>
@@ -274,7 +276,7 @@ object AsyncSocketChannel {
             timeout.map(_.length).getOrElse(0l),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
             cb,
-            completionHandler
+            rwHandler
           )
         } catch {
           case NonFatal(exc) =>

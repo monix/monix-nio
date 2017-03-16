@@ -95,86 +95,72 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     assert(result.forall(r => r))
   }
 
-  /*
-  test("server - handle 10000 clients (echo test)") {
+  test("server - handle 5000 clients (echo test)") {
+    val noOfClients = 5000
     val program = asyncServer(InetAddress.getByName(null).getHostName, 9000).flatMap { taskServerSocketChannel =>
       val handlers = Observable
-        .fromIterable(1 to 2)
-        .mapAsync(16) { _ =>
-          Task {
-            val echoT = for {
-              conn <- taskServerSocketChannel.accept().map(tsc => readWriteAsync(tsc))
-              reader <- conn.tcpObservable
-              writer <- conn.tcpConsumer
-              written <- reader.doOnTerminate(_ => { println("echo"); conn.stopWriting() }).consumeWith(writer)
-              _ <- conn.close()
-            } yield {
-              println("handler - " + written)
-              written
-            }
-            echoT.runAsync(new Callback[Long] {
-              override def onError(ex: Throwable): Unit = ex.printStackTrace()
-              override def onSuccess(value: Long): Unit = println("ok1 - " + value)
-            })
+        .fromIterable(1 to noOfClients)
+        .map(_ => Await.result(taskServerSocketChannel.accept().runAsync, 500.millis))
+        .mapAsync(4) { tsc =>
+          for {
+            conn <- Task.now(readWriteAsync(tsc))
+            reader <- conn.tcpObservable
+            writer <- conn.tcpConsumer
+            written <- reader.doOnTerminate(_ => { conn.stopWriting() }).consumeWith(writer)
+            _ <- conn.close()
+          } yield {
+            written
           }
         }
 
       val clients = Observable
-        .fromIterable(1 to 2)
-        .mapAsync(16) { i =>
+        .fromIterable(1 to noOfClients)
+        .mapAsync(8) { i =>
           val client = readWriteAsync("localhost", 9000, 8)
-
+          val data = s"Hello Monix - $i!".getBytes.grouped(3).toArray
           // writing
-          val data = s"Hello Monix - $i!".getBytes.grouped(8).toArray
           val writeT = client.tcpConsumer.flatMap { writer =>
             Observable.fromIterable(data).consumeWith(writer).flatMap(len => client.stopWriting().map(_ => len))
           }
-
           // reading the echo
-          val rp = Promise[Boolean]()
+          val rp = Promise[String]()
+          val echo = new StringBuilder()
           val readT = for {
             reader <- client.tcpObservable
-            written <- Task.now(
-              reader
-                .doOnTerminate(_ => { println("Terminated"); client.close() })
-                .subscribe(
-                  bytes => {
-                    println(new String(bytes)); Continue
-                  },
-                  err => { println(err); rp.failure(err) },
-                  () => rp.success(true)
-                )
-            )
-          } yield {
-            written
-          }
-
-          writeT.runAsync(new Callback[Long] {
-            override def onError(ex: Throwable): Unit = ex.printStackTrace()
-            override def onSuccess(value: Long): Unit = println("ok2 - " + value)
-          })
-          readT.runAsync(new Callback[Cancelable] {
-            override def onError(ex: Throwable): Unit = ex.printStackTrace()
-            override def onSuccess(value: Cancelable): Unit = println("ok3")
-          })
-          Task.fromFuture(rp.future)
+            _ <- Task.now(reader
+              .doOnTerminate(_ => client.close())
+              .subscribe(
+                bytes => { echo.append(new String(bytes)); Continue },
+                err => rp.failure(err),
+                () => rp.success(echo.toString())
+              ))
+          } yield {}
+          writeT.flatMap(_ => readT.flatMap(_ => Task.fromFuture(rp.future)))
         }
 
-      //clients.toListL.foreach()
       val doneP = Promise[Boolean]()
-      handlers.doOnTerminate(_ => println("server done")).publish.connect()
-      clients
-        .doOnTerminate(_ => { println("TOO SOON"); taskServerSocketChannel.close() })
-        .subscribe(
-          (r: Boolean) => { println(r); Continue },
+      Task {
+        handlers
+          .doOnTerminateEval(_ => taskServerSocketChannel.close())
+          .publish
+          .connect()
+      }.runAsync
+
+      Task {
+        clients.subscribe(
+          _ => Continue,
           err => doneP.failure(err),
-          () => { println("DONE"); doneP.success(true) }
+          () => {
+            taskServerSocketChannel.close()
+            doneP.success(true)
+          }
         )
+      }.runAsync
+
       Task.fromFuture(doneP.future)
     }
-
     assert(Await.result(program.runAsync, 10.seconds))
-  }*/
+  }
 
   test("be able to make a HTTP GET request and pipe the response back") {
     val p = Promise[String]()

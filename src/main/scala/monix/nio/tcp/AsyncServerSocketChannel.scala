@@ -3,10 +3,10 @@ package monix.nio.tcp
 import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.channels.spi.AsynchronousChannelProvider
 import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler }
+import java.util.concurrent.Executors
 
 import monix.eval.Callback
 import monix.execution.{ Cancelable, Scheduler }
-import monix.nio.internal.ExecutorServiceWrapper
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
@@ -100,14 +100,16 @@ object AsyncServerSocketChannel {
     NewIOImplementation(reuseAddress, receiveBufferSize)
   }
 
+  private lazy val acg =
+    AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), -1)
+
   private final case class NewIOImplementation(
       reuseAddress: Boolean = true,
       receiveBufferSize: Int = 256 * 1024
   )(implicit scheduler: Scheduler) extends AsyncServerSocketChannel {
 
     private[this] lazy val asynchronousServerSocketChannel: Either[Throwable, AsynchronousServerSocketChannel] = try {
-      val ag = AsynchronousChannelGroup.withThreadPool(ExecutorServiceWrapper(scheduler))
-      val server = AsynchronousChannelProvider.provider().openAsynchronousServerSocketChannel(ag)
+      val server = AsynchronousChannelProvider.provider().openAsynchronousServerSocketChannel(acg)
 
       server.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
       server.setOption[Integer](StandardSocketOptions.SO_RCVBUF, receiveBufferSize)

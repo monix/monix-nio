@@ -50,11 +50,8 @@ abstract class TaskServerSocketChannel {
     Task.unsafeCreate { (context, cb) =>
       implicit val s = context.scheduler
       asyncServerSocketChannel.accept(new Callback[AsyncSocketChannel] {
-        override def onError(ex: Throwable): Unit =
-          cb.onError(ex)
-
+        override def onError(ex: Throwable): Unit = cb.onError(ex)
         override def onSuccess(value: AsyncSocketChannel): Unit = cb.onSuccess(
-          /* we can use Single Abstract Method (SAM) type here */
           new TaskSocketChannel {
             override val asyncSocketChannel: AsyncSocketChannel = value
           }
@@ -69,11 +66,11 @@ abstract class TaskServerSocketChannel {
     * @param backlog $backlogDesc
     */
   def bind(local: InetSocketAddress, backlog: Int = 0): Task[Unit] =
-    Task.evalOnce(asyncServerSocketChannel.bind(local, backlog))
+    Task.now(asyncServerSocketChannel.bind(local, backlog))
 
   /** $localAddressDesc */
   def localAddress(): Task[Option[InetSocketAddress]] =
-    Task.eval(asyncServerSocketChannel.localAddress())
+    Task.now(asyncServerSocketChannel.localAddress())
 
   /** $closeDesc */
   def close(): Task[Unit] =
