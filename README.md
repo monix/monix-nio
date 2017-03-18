@@ -135,7 +135,7 @@ import monix.nio.tcp._
   
 implicit val ctx = monix.execution.Scheduler.Implicits.global
   
-val echoT = for {
+val serverProgramT = for {
   server <- asyncServer(java.net.InetAddress.getByName(null).getHostName, 9001)
   socket <- server.accept()
   
@@ -149,18 +149,12 @@ val echoT = for {
 } yield {
   echoedLen
 }
-echoT.runAsync(new Callback[Long] {
-  override def onSuccess(value: Long): Unit = println(s"Echoed $value bytes.")
-  override def onError(ex: Throwable): Unit = println(ex)
-})
   
 val client = readWriteAsync("localhost", 9001, 256 * 1024)
-val writeT = for {
+val clientProgramT = for {
   writer <- client.tcpConsumer
   _ <- Observable.fromIterable(Array("Hello world!".getBytes())).consumeWith(writer)
   _ <- client.stopWriting()
-} yield {}
-val readT = for {
   reader <- client.tcpObservable
   _ <- Task.now(reader
     .doOnTerminateEval(_ => client.close())
@@ -173,8 +167,12 @@ val readT = for {
       () => println("Echo received.")
     ))
 } yield {}
-// start writing to the server and read the back echo
-writeT.flatMap(_ => readT).runAsync
+  
+serverProgramT.runAsync(new Callback[Long] {
+  override def onSuccess(value: Long): Unit = println(s"Echoed $value bytes.")
+  override def onError(ex: Throwable): Unit = println(ex)
+})
+clientProgramT.runAsync
 ```
 
 ### Make a raw HTTP request
