@@ -20,5 +20,3 @@ final class AsyncWatchServiceObservable(taskWatchService: TaskWatchService) exte
   }
 }
 
-
-
