@@ -41,6 +41,9 @@ abstract class TaskWatchService {
       watchService.take(Callback.async(cb))
     }
   }
+
+  def close(): Task[Unit] =
+    Task.now(watchService.close())
 }
 
 object TaskWatchService {
