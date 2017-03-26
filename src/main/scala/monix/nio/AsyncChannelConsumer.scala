@@ -115,4 +115,3 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
     (out, conn)
   }
 }
-

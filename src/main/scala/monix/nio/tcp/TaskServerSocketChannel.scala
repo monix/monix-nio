@@ -90,7 +90,7 @@ object TaskServerSocketChannel {
     */
   def apply(
     reuseAddress: Boolean = true,
-    receiveBufferSize: Int = 256 * 1024
+    receiveBufferSize: Option[Int] = None
   )(implicit s: Scheduler): TaskServerSocketChannel = {
 
     new TaskServerSocketChannel {

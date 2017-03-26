@@ -154,7 +154,7 @@ abstract class AsyncSocketChannel extends AutoCloseable {
 
 object AsyncSocketChannel {
   /**
-    * Opens a socket channel for the given [[java.net.InetSocketAddress]]
+    * Opens a TCP socket channel
     *
     * @param reuseAddress      [[java.net.ServerSocket#setReuseAddress]]
     * @param sendBufferSize    [[java.net.Socket#setSendBufferSize]]
@@ -168,8 +168,8 @@ object AsyncSocketChannel {
     */
   def apply(
     reuseAddress: Boolean = true,
-    sendBufferSize: Int = 256 * 1024,
-    receiveBufferSize: Int = 256 * 1024,
+    sendBufferSize: Option[Int] = None,
+    receiveBufferSize: Option[Int] = None,
     keepAlive: Boolean = false,
     noDelay: Boolean = false
   )(implicit s: Scheduler): AsyncSocketChannel = {
@@ -192,8 +192,8 @@ object AsyncSocketChannel {
 
   private[tcp] final case class NewIOImplementation(
       reuseAddress: Boolean = true,
-      sendBufferSize: Int = 256 * 1024,
-      receiveBufferSize: Int = 256 * 1024,
+      sendBufferSize: Option[Int] = None,
+      receiveBufferSize: Option[Int] = None,
       keepAlive: Boolean = false,
       noDelay: Boolean = false
   )(implicit scheduler: Scheduler) extends AsyncSocketChannel {
@@ -215,8 +215,8 @@ object AsyncSocketChannel {
             val ch = AsynchronousChannelProvider.provider().openAsynchronousSocketChannel(acg)
 
             ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
-            ch.setOption[Integer](StandardSocketOptions.SO_SNDBUF, sendBufferSize)
-            ch.setOption[Integer](StandardSocketOptions.SO_RCVBUF, receiveBufferSize)
+            sendBufferSize.foreach(sz => ch.setOption[Integer](StandardSocketOptions.SO_SNDBUF, sz))
+            receiveBufferSize.foreach(sz => ch.setOption[Integer](StandardSocketOptions.SO_RCVBUF, sz))
             ch.setOption[java.lang.Boolean](StandardSocketOptions.SO_KEEPALIVE, keepAlive)
             ch.setOption[java.lang.Boolean](StandardSocketOptions.TCP_NODELAY, noDelay)
 
@@ -236,7 +236,7 @@ object AsyncSocketChannel {
     }
 
     override def localAddress(): Option[InetSocketAddress] = {
-      asyncSocketChannel.fold(_ => None, c => try Option(c.getLocalAddress.asInstanceOf[InetSocketAddress]) catch {
+      asyncSocketChannel.fold(_ => None, c => try Option(c.getLocalAddress).map(_.asInstanceOf[InetSocketAddress]) catch {
         case NonFatal(exc) =>
           scheduler.reportFailure(exc)
           None
@@ -244,7 +244,7 @@ object AsyncSocketChannel {
     }
 
     override def remoteAddress(): Option[InetSocketAddress] = {
-      asyncSocketChannel.fold(_ => None, c => try Option(c.getRemoteAddress.asInstanceOf[InetSocketAddress]) catch {
+      asyncSocketChannel.fold(_ => None, c => try Option(c.getRemoteAddress).map(_.asInstanceOf[InetSocketAddress]) catch {
         case NonFatal(exc) =>
           scheduler.reportFailure(exc)
           None

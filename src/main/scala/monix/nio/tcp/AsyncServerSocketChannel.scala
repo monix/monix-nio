@@ -83,7 +83,7 @@ abstract class AsyncServerSocketChannel extends AutoCloseable {
 
 object AsyncServerSocketChannel {
   /**
-    * Opens a server-socket channel for the given [[java.net.InetSocketAddress]]
+    * Opens a TCP server-socket channel
     *
     * @param reuseAddress [[java.net.ServerSocket#setReuseAddress]]
     * @param receiveBufferSize [[java.net.Socket#setReceiveBufferSize]] [[java.net.ServerSocket#setReceiveBufferSize]]
@@ -94,7 +94,7 @@ object AsyncServerSocketChannel {
     */
   def apply(
     reuseAddress: Boolean = true,
-    receiveBufferSize: Int = 256 * 1024
+    receiveBufferSize: Option[Int] = None
   )(implicit s: Scheduler): AsyncServerSocketChannel = {
 
     NewIOImplementation(reuseAddress, receiveBufferSize)
@@ -105,14 +105,14 @@ object AsyncServerSocketChannel {
 
   private final case class NewIOImplementation(
       reuseAddress: Boolean = true,
-      receiveBufferSize: Int = 256 * 1024
+      receiveBufferSize: Option[Int] = None
   )(implicit scheduler: Scheduler) extends AsyncServerSocketChannel {
 
     private[this] lazy val asynchronousServerSocketChannel: Either[Throwable, AsynchronousServerSocketChannel] = try {
       val server = AsynchronousChannelProvider.provider().openAsynchronousServerSocketChannel(acg)
 
       server.setOption[java.lang.Boolean](StandardSocketOptions.SO_REUSEADDR, reuseAddress)
-      server.setOption[Integer](StandardSocketOptions.SO_RCVBUF, receiveBufferSize)
+      receiveBufferSize.foreach(sz => server.setOption[Integer](StandardSocketOptions.SO_RCVBUF, sz))
 
       Right(server)
     } catch {
@@ -144,7 +144,7 @@ object AsyncServerSocketChannel {
     }
 
     override def localAddress(): Option[InetSocketAddress] = {
-      asynchronousServerSocketChannel.fold(_ => None, c => try Option(c.getLocalAddress.asInstanceOf[InetSocketAddress]) catch {
+      asynchronousServerSocketChannel.fold(_ => None, c => try Option(c.getLocalAddress).map(_.asInstanceOf[InetSocketAddress]) catch {
         case NonFatal(exc) =>
           scheduler.reportFailure(exc)
           None

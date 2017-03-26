@@ -132,8 +132,8 @@ object TaskSocketChannel {
     */
   def apply(
     reuseAddress: Boolean = true,
-    sendBufferSize: Int = 256 * 1024,
-    receiveBufferSize: Int = 256 * 1024,
+    sendBufferSize: Option[Int] = None,
+    receiveBufferSize: Option[Int] = None,
     keepAlive: Boolean = false,
     noDelay: Boolean = false
   )(implicit s: Scheduler): TaskSocketChannel = {
