@@ -84,6 +84,25 @@ readAsync(from, 3)
   .runAsync(callback)
 ```
 
+### File system watcher
+```scala
+import java.nio.file.{ Paths, WatchEvent }
+import monix.nio.file._
+  
+implicit val ctx = monix.execution.Scheduler.Implicits.global
+  
+val path = Paths.get("/tmp")
+  
+def printEvent(event: WatchEvent[_]): Unit = {
+  val name = event.context().toString
+  val fullPath = path.resolve(name)
+  println(s"${event.kind().name()} - $fullPath")
+}
+  
+watchAsync(path)
+  .foreach(p => p.foreach(printEvent))
+```
+
 ### Read from TCP
 ```commandline
 $ echo 'monix-tcp' | nc -l -k 9000
