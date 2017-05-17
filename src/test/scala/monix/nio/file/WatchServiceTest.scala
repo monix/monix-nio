@@ -1,18 +1,49 @@
 package monix.nio.file
 
+import java.io.File
 import java.nio.file.{ Paths, WatchEvent }
 
-object MyApp extends App {
+import minitest.SimpleTestSuite
+import monix.eval.Task
+import monix.execution.Ack.{ Continue, Stop }
+
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
+object WatchServiceTest extends SimpleTestSuite {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
 
-  val path = Paths.get("/tmp")
+  test("file event captured") {
+    val path = Paths.get(System.getProperty("java.io.tmpdir"))
 
-  def printEvent(event: WatchEvent[_]): Unit = {
-    val name = event.context().toString
-    val fullPath = path.resolve(name)
-    println(s"${event.kind().name()} - $fullPath")
+    val watchP = Promise[Boolean]()
+    val watchT = Task {
+      watchAsync(path).timeoutOnSlowUpstream(5.seconds).subscribe(
+        (events: Array[WatchEvent[_]]) => {
+          // println(events.toList.map(e => s"${e.kind().name()} - ${e.context().toString}"))
+          val captured = events.find(e => s"${e.kind().name()} - ${e.context().toString}".contains("monix"))
+          if (captured.isDefined) {
+            watchP.success(true)
+            Stop
+          } else {
+            Continue
+          }
+        },
+        err => watchP.failure(err),
+        () => watchP.success(true)
+      )
+    }
+    val fileT = Task {
+      val temp = File.createTempFile("monix", ".tmp", path.toFile)
+      /* OS limitation - watch is done at minimum 1 second interval between changes */
+      Thread.sleep(2000)
+      temp.delete()
+    }
+
+    watchT.runAsync
+    fileT.runAsync
+
+    val result = Await.result(watchP.future, 10.seconds)
+    assert(result)
   }
 
-  watchAsync(path)
-    .foreach(p => p.foreach(printEvent))
 }
