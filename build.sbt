@@ -5,13 +5,13 @@ import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import scalariform.formatter.preferences._
 
-val monixVersion = "2.2.3"
+val monixVersion = "2.3.0"
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
-  scalaVersion := "2.11.8",
-  crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.1"),
+  scalaVersion := "2.11.11",
+  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.2"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -106,7 +106,7 @@ val appSettings = Seq(
       .withWarnScalaVersionEviction(false),
   libraryDependencies ++= Seq(
     "io.monix" %% "monix-reactive" % monixVersion,
-    "io.monix" %% "minitest" % "0.27" % "test"
+    "io.monix" %% "minitest" % "1.1.0" % Test
   ),
 
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),

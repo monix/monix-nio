@@ -1,6 +1,6 @@
 package monix.nio.file
 
-import java.nio.file.{Paths, WatchEvent}
+import java.nio.file.{ Paths, WatchEvent }
 
 object MyApp extends App {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
