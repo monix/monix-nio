@@ -68,8 +68,8 @@ abstract class WatchServiceObservable extends Observable[Array[WatchEvent[_]]] {
             case Stop => emptyTask
           }
         }
-      }
-    }.getOrElse(emptyTask)
+    }
+  }.getOrElse(emptyTask)
 
   private val emptyTask = Task.create[Array[WatchEvent[_]]]((_, _) => Cancelable.empty)
 }
