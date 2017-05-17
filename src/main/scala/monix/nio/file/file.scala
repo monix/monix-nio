@@ -18,6 +18,7 @@
 package monix.nio
 
 import java.nio.ByteBuffer
+import java.nio.file.WatchEvent.Kind
 import java.nio.file.{ Path, StandardOpenOption }
 
 import monix.execution.Scheduler
@@ -47,6 +48,14 @@ package object file {
     val flagsWithWriteOptions = flags :+ StandardOpenOption.WRITE :+ StandardOpenOption.CREATE
     val channel = TaskFileChannel(path.toFile, flagsWithWriteOptions: _*)
     new AsyncFileChannelConsumer(channel, startPosition)
+  }
+
+  def watchAsync(
+    path: Path,
+    events: Seq[Kind[_]] = Seq.empty
+  )(implicit s: Scheduler): WatchServiceObservable = {
+    val watcher = TaskWatchService(path, events: _*)
+    new AsyncWatchServiceObservable(watcher)
   }
 
   private[file] def asyncChannelWrapper(taskFileChannel: TaskFileChannel) = new AsyncChannel {
