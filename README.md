@@ -15,6 +15,7 @@ For the moment the following support has been added:
 
 - Read/Write async to a file (combined with utf8 encoding/decoding if necessary)
 - Read/Write async to TCP
+- File system watcher
 
 ## Usage
 
