@@ -17,7 +17,7 @@ object WatchServiceTest extends SimpleTestSuite {
 
     val watchP = Promise[Boolean]()
     val watchT = Task {
-      watchAsync(path).timeoutOnSlowUpstream(5.seconds).subscribe(
+      watchAsync(path).timeoutOnSlowUpstream(10.seconds).subscribe(
         (events: Array[WatchEvent[_]]) => {
           val captured = events.find(e => s"${e.kind().name()} - ${e.context().toString}".contains("monix"))
           if (captured.isDefined) {
@@ -40,7 +40,7 @@ object WatchServiceTest extends SimpleTestSuite {
     watchT.runAsync
     fileT.runAsync
 
-    val result = Await.result(watchP.future, 10.seconds)
+    val result = Await.result(watchP.future, 20.seconds)
     assert(result)
   }
 

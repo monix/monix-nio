@@ -1,17 +1,24 @@
 import com.typesafe.sbt.pgp.PgpKeys
+
 import scala.xml.Elem
 import scala.xml.transform.{RewriteRule, RuleTransformer}
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+
 import scalariform.formatter.preferences._
+import sbt.addCommandAlias
+import sbtrelease.{Version, versionFormatError}
+
+addCommandAlias("release", ";+publishSigned ;sonatypeReleaseAll")
 
 val monixVersion = "2.3.0"
+
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
-  scalaVersion := "2.11.11",
-  crossScalaVersions := Seq("2.10.6", "2.11.11", "2.12.4"),
+  scalaVersion := "2.12.4",
+  crossScalaVersions := Seq("2.10.7", "2.11.12", "2.12.4"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -113,13 +120,25 @@ val appSettings = Seq(
 
   // -- Settings meant for deployment on oss.sonatype.org
 
-  useGpg := true,
-  useGpgAgent := true,
+  useGpg := false,
   usePgpKeyHex("2673B174C4071B0E"),
+  pgpPublicRing := baseDirectory.value / "project" / ".gnupg" / "pubring.gpg",
+  pgpSecretRing := baseDirectory.value / "project" / ".gnupg" / "secring.gpg",
+  pgpPassphrase := sys.env.get("PGP_PASS").map(_.toArray),
 
   publishMavenStyle := true,
   releaseCrossBuild := true,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+
+  releaseVersion := { ver => Version(ver).map(_.string).getOrElse(versionFormatError) },
+  releaseNextVersion := { ver => Version(ver).map(_.string).getOrElse(versionFormatError) },
+
+  credentials += Credentials(
+    "Sonatype Nexus Repository Manager",
+    "oss.sonatype.org",
+    sys.env.getOrElse("SONATYPE_USER", ""),
+    sys.env.getOrElse("SONATYPE_PASS", "")
+  ),
 
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
