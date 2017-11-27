@@ -19,8 +19,7 @@ For the moment the following support has been added:
 
 ## Usage
 
-**WARNING:** highly experimental, breaks backwards compatibility often, 
-might have bugs, use with great care!
+**WARNING:** experimental, can break backwards compatibility!
 
 ### Adding dependency to SBT
 
