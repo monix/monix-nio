@@ -212,4 +212,5 @@ val monixNio = Project(id = "monix-nio", base = file("."))
   .settings(appSettings)
   .settings(formattingSettings)
   .configure(profile)
+  .enablePlugins(JmhPlugin)
 

@@ -17,6 +17,23 @@ For the moment the following support has been added:
 - Read/Write async to TCP
 - File system watcher
 
+## Benchmarks
+
+```text
+Benchmark                                          Mode  Cnt     Score    Error  Units
+ReadWriteFileBenchmark.read50MiB                     ss   10    52.086 ± 28.819  ms/op
+ReadWriteFileBenchmark.read50MiBJavaNio              ss   10    27.466 ± 10.353  ms/op
+ReadWriteFileBenchmark.read50MiBWith100KiBChunks     ss   10    36.845 ± 17.278  ms/op
+ReadWriteFileBenchmark.read50MiBWith1KiBChunks       ss   10   584.531 ± 56.074  ms/op
+ReadWriteFileBenchmark.read50MiBWith1MiBChunks       ss   10    32.295 ± 12.805  ms/op
+ReadWriteFileBenchmark.write50MiB                    ss   10    79.525 ± 18.076  ms/op
+ReadWriteFileBenchmark.write50MiBJavaNio             ss   10   145.732 ± 29.536  ms/op
+ReadWriteFileBenchmark.write50MiBWith100KiBChunks    ss   10    79.335 ± 18.774  ms/op
+ReadWriteFileBenchmark.write50MiBWith1KiBChunks      ss   10  1401.257 ± 97.858  ms/op
+ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   10    82.181 ± 39.319  ms/op
+```
+- lower is better
+
 ## Usage
 
 **WARNING:** experimental, can break backwards compatibility!

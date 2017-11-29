@@ -8,3 +8,4 @@ target/
 /.lib/
 project/target/
 .classpath
+monix-in.nio
