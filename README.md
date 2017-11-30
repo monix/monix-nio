@@ -36,7 +36,7 @@ ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   10    82.181 ± 39.319
 
 ## Usage
 
-**WARNING:** experimental, can break backwards compatibility!
+**WARNING:** Can break backwards compatibility!
 
 ### Adding dependency to SBT
 
