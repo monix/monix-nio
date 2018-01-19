@@ -95,8 +95,7 @@ package object tcp {
   def readWriteAsync(
     host: String,
     port: Int,
-    bufferSize: Int
-  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
+    bufferSize: Int)(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
 
     AsyncSocketChannelClient(host, port, bufferSize)
   }
@@ -115,8 +114,7 @@ package object tcp {
     */
   def readWriteAsync(
     taskSocketChannel: TaskSocketChannel,
-    bufferSize: Int = 256 * 1024
-  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
+    bufferSize: Int = 256 * 1024)(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
 
     AsyncSocketChannelClient(taskSocketChannel, bufferSize)
   }
@@ -131,8 +129,7 @@ package object tcp {
     */
   def asyncServer(
     host: String,
-    port: Int
-  )(implicit scheduler: Scheduler) = {
+    port: Int)(implicit scheduler: Scheduler) = {
 
     val server = TaskServerSocketChannel()
     server

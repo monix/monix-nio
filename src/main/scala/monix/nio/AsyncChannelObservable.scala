@@ -23,7 +23,7 @@ import monix.eval.{ Callback, Task }
 import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.{ Cancelable, Scheduler }
 import monix.execution.atomic.Atomic
-import monix.execution.cancelables.SingleAssignmentCancelable
+import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.exceptions.APIContractViolationException
 import monix.nio.internal.{ Bytes, EmptyBytes, NonEmptyBytes }
 import monix.reactive.Observable
@@ -76,7 +76,7 @@ private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte
       cancelable.cancel()
       closeChannel()
     })
-    SingleAssignmentCancelable.plusOne(extraCancelable)
+    SingleAssignCancelable.plusOne(extraCancelable)
   }
 
   private[this] val buffer = ByteBuffer.allocate(bufferSize)

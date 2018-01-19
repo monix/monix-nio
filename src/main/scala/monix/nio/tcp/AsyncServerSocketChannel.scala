@@ -94,8 +94,7 @@ object AsyncServerSocketChannel {
     */
   def apply(
     reuseAddress: Boolean = true,
-    receiveBufferSize: Option[Int] = None
-  )(implicit s: Scheduler): AsyncServerSocketChannel = {
+    receiveBufferSize: Option[Int] = None)(implicit s: Scheduler): AsyncServerSocketChannel = {
 
     NewIOImplementation(reuseAddress, receiveBufferSize)
   }
@@ -104,9 +103,8 @@ object AsyncServerSocketChannel {
     AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), -1)
 
   private final case class NewIOImplementation(
-      reuseAddress: Boolean = true,
-      receiveBufferSize: Option[Int] = None
-  )(implicit scheduler: Scheduler) extends AsyncServerSocketChannel {
+    reuseAddress: Boolean = true,
+    receiveBufferSize: Option[Int] = None)(implicit scheduler: Scheduler) extends AsyncServerSocketChannel {
 
     private[this] lazy val asynchronousServerSocketChannel: Either[Throwable, AsynchronousServerSocketChannel] = try {
       val server = AsynchronousChannelProvider.provider().openAsynchronousServerSocketChannel(acg)

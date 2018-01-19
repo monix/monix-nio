@@ -23,7 +23,7 @@ import monix.eval.Callback
 import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.{ Ack, Cancelable, Scheduler }
 import monix.execution.atomic.Atomic
-import monix.execution.cancelables.{ AssignableCancelable, SingleAssignmentCancelable }
+import monix.execution.cancelables.{ AssignableCancelable, SingleAssignCancelable }
 import monix.reactive.Consumer
 import monix.reactive.observers.Subscriber
 
@@ -36,7 +36,7 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
   def init(subscriber: AsyncChannelSubscriber): Future[Unit] = Future.successful(())
 
   class AsyncChannelSubscriber(consumerCallback: Callback[Long])(implicit val scheduler: Scheduler)
-      extends Subscriber[Array[Byte]] { self =>
+    extends Subscriber[Array[Byte]] { self =>
 
     private[this] lazy val initFuture = init(self)
     private[this] val callbackCalled = Atomic(false)
@@ -61,8 +61,7 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
                     position += result
                     promise.success(Continue)
                   }
-                }
-              )
+                })
           } catch {
             case NonFatal(ex) =>
               sendError(ex)
@@ -111,7 +110,7 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
     val out = new AsyncChannelSubscriber(cb)(s)
 
     val extraCancelable = Cancelable(() => out.onCancel())
-    val conn = SingleAssignmentCancelable.plusOne(extraCancelable)
+    val conn = SingleAssignCancelable.plusOne(extraCancelable)
     (out, conn)
   }
 }

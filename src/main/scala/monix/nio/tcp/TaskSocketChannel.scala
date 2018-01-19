@@ -135,8 +135,7 @@ object TaskSocketChannel {
     sendBufferSize: Option[Int] = None,
     receiveBufferSize: Option[Int] = None,
     keepAlive: Boolean = false,
-    noDelay: Boolean = false
-  )(implicit s: Scheduler): TaskSocketChannel = {
+    noDelay: Boolean = false)(implicit s: Scheduler): TaskSocketChannel = {
 
     new TaskSocketChannel {
       override val asyncSocketChannel =

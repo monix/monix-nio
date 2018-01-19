@@ -57,8 +57,7 @@ object WatchService {
     path.register(
       watcher,
       watchFor.toArray,
-      SensitivityWatchEventModifier.HIGH.asInstanceOf[WatchEvent.Modifier]
-    )
+      SensitivityWatchEventModifier.HIGH.asInstanceOf[WatchEvent.Modifier])
 
     new NIOWatcherServiceImplementation(watcher)
   }

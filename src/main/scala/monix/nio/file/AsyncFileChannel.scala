@@ -194,15 +194,12 @@ object AsyncFileChannel {
       AsynchronousFileChannel.open(
         file.toPath,
         options.toSet.asJava,
-        ExecutorServiceWrapper(s)
-      )
-    )
+        ExecutorServiceWrapper(s)))
   }
 
   /** Implementation for [[AsyncFileChannel]] that uses Java's NIO. */
   private final class NewIOImplementation(
-      underlying: AsynchronousFileChannel
-  )(implicit scheduler: Scheduler) extends AsyncFileChannel {
+    underlying: AsynchronousFileChannel)(implicit scheduler: Scheduler) extends AsyncFileChannel {
 
     override def isOpen: Boolean =
       underlying.isOpen

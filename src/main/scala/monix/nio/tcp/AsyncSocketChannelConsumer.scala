@@ -34,9 +34,8 @@ import scala.concurrent.Promise
   * @param port TCP port number
   */
 final class AsyncSocketChannelConsumer private[tcp] (
-    host: String,
-    port: Int
-) extends AsyncChannelConsumer {
+  host: String,
+  port: Int) extends AsyncChannelConsumer {
 
   private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
   private[this] var closeOnComplete = true

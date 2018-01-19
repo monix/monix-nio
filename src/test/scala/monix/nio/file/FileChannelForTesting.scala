@@ -25,9 +25,8 @@ import monix.execution.atomic.Atomic
 import monix.nio.AsyncChannel
 
 class FileChannelForTesting(
-    readingSeq: Vector[Array[Byte]],
-    writeSeq: Atomic[Vector[Array[Byte]]]
-)(implicit s: Scheduler) extends TaskFileChannel with AsyncChannel {
+  readingSeq: Vector[Array[Byte]],
+  writeSeq: Atomic[Vector[Array[Byte]]])(implicit s: Scheduler) extends TaskFileChannel with AsyncChannel {
 
   private val asyncFileChannelForTesting =
     new AsyncFileChannelForTesting(readingSeq, writeSeq)
@@ -42,9 +41,8 @@ class FileChannelForTesting(
   def createWriteException() = asyncFileChannelForTesting.createWriteException()
 
   private final class AsyncFileChannelForTesting(
-      readingSeq: Vector[Array[Byte]],
-      writeSeq: Atomic[Vector[Array[Byte]]]
-  )(implicit s: Scheduler) extends AsyncFileChannel {
+    readingSeq: Vector[Array[Byte]],
+    writeSeq: Atomic[Vector[Array[Byte]]])(implicit s: Scheduler) extends AsyncFileChannel {
 
     private val readChannelPosition = Atomic(0)
     private val writeChannelPosition = Atomic(0)

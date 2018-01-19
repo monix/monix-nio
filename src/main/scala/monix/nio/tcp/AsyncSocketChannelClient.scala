@@ -42,10 +42,9 @@ import monix.execution.Scheduler
   * @define closeDesc Closes this channel
   */
 final class AsyncSocketChannelClient(
-    host: String,
-    port: Int,
-    bufferSize: Int
-)(implicit scheduler: Scheduler) {
+  host: String,
+  port: Int,
+  bufferSize: Int)(implicit scheduler: Scheduler) {
 
   private var taskSocketChannel: Option[TaskSocketChannel] = None
   private def this(tsc: TaskSocketChannel, bufferSize: Int)(implicit scheduler: Scheduler) {
@@ -102,8 +101,7 @@ object AsyncSocketChannelClient {
   def apply(
     host: String,
     port: Int,
-    bufferSize: Int
-  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
+    bufferSize: Int)(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
 
     val client = new AsyncSocketChannelClient(host, port, bufferSize)
     client.init()
@@ -112,8 +110,7 @@ object AsyncSocketChannelClient {
 
   def apply(
     taskSocketChannel: TaskSocketChannel,
-    bufferSize: Int
-  )(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
+    bufferSize: Int)(implicit scheduler: Scheduler): AsyncSocketChannelClient = {
 
     val client = new AsyncSocketChannelClient(taskSocketChannel, bufferSize)
     client.init()

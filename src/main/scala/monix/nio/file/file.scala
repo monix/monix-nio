@@ -33,8 +33,7 @@ package object file {
 
   def writeAsync(
     path: Path,
-    flags: Seq[StandardOpenOption] = Seq.empty
-  )(implicit s: Scheduler): AsyncFileChannelConsumer = {
+    flags: Seq[StandardOpenOption] = Seq.empty)(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
     appendAsync(path, 0, flags)
   }
@@ -42,8 +41,7 @@ package object file {
   def appendAsync(
     path: Path,
     startPosition: Long,
-    flags: Seq[StandardOpenOption] = Seq.empty
-  )(implicit s: Scheduler): AsyncFileChannelConsumer = {
+    flags: Seq[StandardOpenOption] = Seq.empty)(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
     val flagsWithWriteOptions = flags :+ StandardOpenOption.WRITE :+ StandardOpenOption.CREATE
     val channel = TaskFileChannel(path.toFile, flagsWithWriteOptions: _*)
@@ -52,8 +50,7 @@ package object file {
 
   def watchAsync(
     path: Path,
-    events: Seq[Kind[_]] = Seq.empty
-  )(implicit s: Scheduler): WatchServiceObservable = {
+    events: Seq[Kind[_]] = Seq.empty)(implicit s: Scheduler): WatchServiceObservable = {
     val watcher = TaskWatchService(path, events: _*)
     new AsyncWatchServiceObservable(watcher)
   }

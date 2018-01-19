@@ -5,7 +5,7 @@ import java.nio.file.WatchEvent
 import monix.eval.{ Callback, Task }
 import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.atomic.Atomic
-import monix.execution.cancelables.SingleAssignmentCancelable
+import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.exceptions.APIContractViolationException
 import monix.execution.{ Cancelable, Scheduler }
 import monix.reactive.Observable
@@ -52,7 +52,7 @@ abstract class WatchServiceObservable extends Observable[Array[WatchEvent[_]]] {
     val extraCancelable = Cancelable(() => {
       cancelable.cancel()
     })
-    SingleAssignmentCancelable.plusOne(extraCancelable)
+    SingleAssignCancelable.plusOne(extraCancelable)
   }
 
   private def loop(subscriber: Subscriber[Array[WatchEvent[_]]])(implicit scheduler: Scheduler): Task[Array[WatchEvent[_]]] = {

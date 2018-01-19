@@ -36,9 +36,8 @@ import scala.concurrent.Promise
   * @param bufferSize the size of the buffer used for reading
   */
 final class AsyncSocketChannelObservable private[tcp] (
-    host: String, port: Int,
-    override val bufferSize: Int = 256 * 1024
-) extends AsyncChannelObservable {
+  host: String, port: Int,
+  override val bufferSize: Int = 256 * 1024) extends AsyncChannelObservable {
 
   private[this] val connectedSignal = Promise[Unit]()
   private[this] var taskSocketChannel: Option[TaskSocketChannel] = None

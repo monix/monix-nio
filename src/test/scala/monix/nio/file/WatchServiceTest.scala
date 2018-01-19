@@ -28,8 +28,7 @@ object WatchServiceTest extends SimpleTestSuite {
           }
         },
         err => watchP.failure(err),
-        () => watchP.success(true)
-      )
+        () => watchP.success(true))
     }
     val fileT = Task {
       val temp = File.createTempFile("monix", ".tmp", path.toFile)

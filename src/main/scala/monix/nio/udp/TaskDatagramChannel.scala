@@ -125,8 +125,7 @@ object TaskDatagramChannel {
     protocolFamily: Option[ProtocolFamily] = None,
     multicastInterface: Option[NetworkInterface] = None,
     multicastTTL: Option[Int] = None,
-    multicastLoopback: Boolean = true
-  )(implicit s: Scheduler): TaskDatagramChannel = {
+    multicastLoopback: Boolean = true)(implicit s: Scheduler): TaskDatagramChannel = {
 
     new TaskDatagramChannel {
       override val asyncDatagramChannel =

@@ -30,8 +30,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
   def tearDown(s: TestScheduler): Unit = {
     assert(
       s.state.tasks.isEmpty,
-      "TestScheduler should have no pending tasks"
-    )
+      "TestScheduler should have no pending tasks")
   }
 
   def tick(n: Int)(implicit s: TestScheduler) = (1 to n) map (_ => s.tickOne())

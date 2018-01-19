@@ -103,22 +103,20 @@ object AsyncDatagramChannel {
     protocolFamily: Option[ProtocolFamily] = None,
     multicastInterface: Option[NetworkInterface] = None,
     multicastTTL: Option[Int] = None,
-    multicastLoopback: Boolean = true
-  )(implicit s: Scheduler): AsyncDatagramChannel = {
+    multicastLoopback: Boolean = true)(implicit s: Scheduler): AsyncDatagramChannel = {
 
     NewIOImplementation(reuseAddress, sendBufferSize, receiveBufferSize, allowBroadcast, protocolFamily, multicastInterface, multicastTTL, multicastLoopback)
   }
 
   private[udp] final case class NewIOImplementation(
-      reuseAddress: Boolean = true,
-      sendBufferSize: Option[Int] = None,
-      receiveBufferSize: Option[Int] = None,
-      allowBroadcast: Boolean = true,
-      protocolFamily: Option[ProtocolFamily] = None,
-      multicastInterface: Option[NetworkInterface] = None,
-      multicastTTL: Option[Int] = None,
-      multicastLoopback: Boolean = true
-  )(implicit scheduler: Scheduler) extends AsyncDatagramChannel {
+    reuseAddress: Boolean = true,
+    sendBufferSize: Option[Int] = None,
+    receiveBufferSize: Option[Int] = None,
+    allowBroadcast: Boolean = true,
+    protocolFamily: Option[ProtocolFamily] = None,
+    multicastInterface: Option[NetworkInterface] = None,
+    multicastTTL: Option[Int] = None,
+    multicastLoopback: Boolean = true)(implicit scheduler: Scheduler) extends AsyncDatagramChannel {
 
     private[this] lazy val asyncDatagramChannel: Either[Throwable, DatagramChannel] =
       try {

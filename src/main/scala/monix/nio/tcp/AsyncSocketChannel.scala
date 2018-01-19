@@ -171,8 +171,7 @@ object AsyncSocketChannel {
     sendBufferSize: Option[Int] = None,
     receiveBufferSize: Option[Int] = None,
     keepAlive: Boolean = false,
-    noDelay: Boolean = false
-  )(implicit s: Scheduler): AsyncSocketChannel = {
+    noDelay: Boolean = false)(implicit s: Scheduler): AsyncSocketChannel = {
 
     NewIOImplementation(reuseAddress, sendBufferSize, receiveBufferSize, keepAlive, noDelay)
   }
@@ -191,12 +190,11 @@ object AsyncSocketChannel {
   }
 
   private[tcp] final case class NewIOImplementation(
-      reuseAddress: Boolean = true,
-      sendBufferSize: Option[Int] = None,
-      receiveBufferSize: Option[Int] = None,
-      keepAlive: Boolean = false,
-      noDelay: Boolean = false
-  )(implicit scheduler: Scheduler) extends AsyncSocketChannel {
+    reuseAddress: Boolean = true,
+    sendBufferSize: Option[Int] = None,
+    receiveBufferSize: Option[Int] = None,
+    keepAlive: Boolean = false,
+    noDelay: Boolean = false)(implicit scheduler: Scheduler) extends AsyncSocketChannel {
 
     private[this] var existingAsyncSocketChannelO: Option[AsynchronousSocketChannel] = None
 
@@ -259,8 +257,7 @@ object AsyncSocketChannel {
             timeout.map(_.length).getOrElse(0l),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
             cb,
-            rwHandler
-          )
+            rwHandler)
         } catch {
           case NonFatal(exc) =>
             cb.onError(exc)
@@ -276,8 +273,7 @@ object AsyncSocketChannel {
             timeout.map(_.length).getOrElse(0l),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
             cb,
-            rwHandler
-          )
+            rwHandler)
         } catch {
           case NonFatal(exc) =>
             cb.onError(exc)

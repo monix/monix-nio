@@ -34,7 +34,7 @@ import scala.concurrent.{ Await, ExecutionContextExecutorService }
   * `shutdown` operations, however this is optional.
   */
 private[nio] final class ExecutorServiceWrapper(scheduler: Scheduler)
-    extends AbstractExecutorService with ExecutionContextExecutorService {
+  extends AbstractExecutorService with ExecutionContextExecutorService {
 
   override def execute(runnable: Runnable): Unit =
     scheduler.execute(runnable)

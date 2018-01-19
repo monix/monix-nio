@@ -4,6 +4,7 @@ import scala.xml.Elem
 import scala.xml.transform.{RewriteRule, RuleTransformer}
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+import ReleaseTransformations._
 
 import scalariform.formatter.preferences._
 import sbt.addCommandAlias
@@ -11,14 +12,14 @@ import sbtrelease.{Version, versionFormatError}
 
 addCommandAlias("release", ";+publishSigned ;sonatypeReleaseAll")
 
-val monixVersion = "2.3.0"
+val monixVersion = "3.0.0-M3"
 
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
   scalaVersion := "2.12.4",
-  crossScalaVersions := Seq("2.10.7", "2.11.12", "2.12.4"),
+  crossScalaVersions := Seq("2.11.12", "2.12.4"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -128,6 +129,13 @@ val appSettings = Seq(
 
   publishMavenStyle := true,
   releaseCrossBuild := true,
+  releaseProcess := Seq[ReleaseStep](
+    checkSnapshotDependencies,              // : ReleaseStep
+    inquireVersions,                        // : ReleaseStep
+    runClean,                               // : ReleaseStep
+    runTest,                                // : ReleaseStep
+    publishArtifacts,                       // : ReleaseStep, checks whether `publishTo` is properly set up
+  ),
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
 
   releaseVersion := { ver => Version(ver).map(_.string).getOrElse(versionFormatError) },

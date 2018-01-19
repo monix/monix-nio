@@ -54,8 +54,7 @@ abstract class TaskServerSocketChannel {
         override def onSuccess(value: AsyncSocketChannel): Unit = cb.onSuccess(
           new TaskSocketChannel {
             override val asyncSocketChannel: AsyncSocketChannel = value
-          }
-        )
+          })
       })
     }
 
@@ -90,8 +89,7 @@ object TaskServerSocketChannel {
     */
   def apply(
     reuseAddress: Boolean = true,
-    receiveBufferSize: Option[Int] = None
-  )(implicit s: Scheduler): TaskServerSocketChannel = {
+    receiveBufferSize: Option[Int] = None)(implicit s: Scheduler): TaskServerSocketChannel = {
 
     new TaskServerSocketChannel {
       override val asyncServerSocketChannel = AsyncServerSocketChannel(reuseAddress, receiveBufferSize)

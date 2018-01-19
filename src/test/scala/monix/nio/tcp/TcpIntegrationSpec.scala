@@ -41,8 +41,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
               Continue
           },
           err => rp.failure(err),
-          () => rp.success(true)
-        )
+          () => rp.success(true))
       }
 
       writeT.runAsync(new Callback[Int] {
@@ -72,7 +71,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       _ <- server.bind(new InetSocketAddress(InetAddress.getByName(null), 9000))
       conn <- server.accept()
       read <- readAsync(conn, chunkSize)
-        .doOnTerminateEval(_ => server.close())
+        .doOnTerminateEval[Task](_ => server.close())
         .consumeWith(Consumer.foreach(recvBytes => recv.append(new String(recvBytes))))
     } yield {
       read
@@ -103,12 +102,12 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       val handlers = Observable
         .fromIterable(1 to noOfClients)
         .mapTask(_ => taskServerSocketChannel.accept())
-        .mapAsync(4) { tsc =>
+        .mapParallelUnordered(4) { tsc =>
           for {
             conn <- Task.now(readWriteAsync(tsc))
             reader <- conn.tcpObservable
             writer <- conn.tcpConsumer
-            written <- reader.doOnTerminateEval(_ => conn.stopWriting()).consumeWith(writer)
+            written <- reader.doOnTerminateEval[Task](_ => conn.stopWriting()).consumeWith(writer)
             _ <- conn.close()
           } yield {
             written
@@ -117,7 +116,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
       val clients = Observable
         .fromIterable(1 to noOfClients)
-        .mapAsync(16) { i =>
+        .mapParallelUnordered(16) { i =>
           val client = readWriteAsync("localhost", 9000, 8)
           val msg = s"Hello Monix - $i!"
           val data = msg.getBytes.grouped(3).toArray
@@ -131,12 +130,11 @@ object TcpIntegrationSpec extends SimpleTestSuite {
           val readT = for {
             reader <- client.tcpObservable
             _ <- Task.now(reader
-              .doOnTerminateEval(_ => client.close())
+              .doOnTerminateEval[Task](_ => client.close())
               .subscribe(
                 bytes => { echo.append(new String(bytes)); Continue },
                 err => rp.failure(err),
-                () => rp.success(echo.toString() == msg)
-              ))
+                () => rp.success(echo.toString() == msg)))
           } yield {}
           writeT.flatMap(_ => readT.flatMap(_ => Task.fromFuture(rp.future)))
         }
@@ -144,7 +142,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       val doneP = Promise[Boolean]()
       Task {
         handlers
-          .doOnTerminateEval(_ => taskServerSocketChannel.close())
+          .doOnTerminateEval[Task](_ => taskServerSocketChannel.close())
           .publish
           .connect()
       }.runAsync
@@ -159,8 +157,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
           () => {
             taskServerSocketChannel.close()
             doneP.success(echoed.get)
-          }
-        )
+          })
       }.runAsync
 
       Task.fromFuture(doneP.future)
@@ -175,7 +172,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map {
       _
-        .doOnTerminateEval(_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .doOnTerminateEval[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
         .subscribe(
           (bytes: Array[Byte]) => {
             recv.append(new String(bytes, "UTF-8"))
@@ -185,8 +182,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
               Continue
             }
           },
-          err => p.failure(err)
-        )
+          err => p.failure(err))
     }.runAsync
 
     /* trigger a response to be read */
@@ -209,7 +205,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>
       reader
-        .doOnTerminateEval(_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .doOnTerminateEval[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
         .subscribe(
           (bytes: Array[Byte]) => {
             recv.append(new String(bytes, "UTF-8"))
@@ -219,8 +215,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
               Continue
             }
           },
-          err => p.failure(err)
-        )
+          err => p.failure(err))
     }.runAsync
 
     // test with small chunks (2 bytes) to test order
