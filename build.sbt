@@ -18,8 +18,8 @@ val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
-  scalaVersion := "2.12.4",
-  crossScalaVersions := Seq("2.11.12", "2.12.4"),
+  scalaVersion := "2.12.8",
+  crossScalaVersions := Seq("2.11.12", "2.12.8"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -114,7 +114,7 @@ val appSettings = Seq(
       .withWarnScalaVersionEviction(false),
   libraryDependencies ++= Seq(
     "io.monix" %% "monix-reactive" % monixVersion,
-    "io.monix" %% "minitest" % "1.1.0" % Test
+    "io.monix" %% "minitest" % "2.2.2" % Test
   ),
 
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
@@ -138,8 +138,8 @@ val appSettings = Seq(
   ),
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
 
-  releaseVersion := { ver => Version(ver).map(_.string).getOrElse(versionFormatError) },
-  releaseNextVersion := { ver => Version(ver).map(_.string).getOrElse(versionFormatError) },
+  releaseVersion := { ver => Version(ver).map(_.string).getOrElse(versionFormatError(ver)) },
+  releaseNextVersion := { ver => Version(ver).map(_.string).getOrElse(versionFormatError(ver)) },
 
   credentials += Credentials(
     "Sonatype Nexus Repository Manager",
