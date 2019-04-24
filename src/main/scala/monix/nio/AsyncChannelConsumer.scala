@@ -19,14 +19,14 @@ package monix.nio
 
 import java.nio.ByteBuffer
 
-import monix.execution.Ack.{Continue, Stop}
-import monix.execution.{Ack, Callback, Cancelable, Scheduler}
+import monix.execution.Ack.{ Continue, Stop }
+import monix.execution.{ Ack, Callback, Cancelable, Scheduler }
 import monix.execution.atomic.Atomic
-import monix.execution.cancelables.{AssignableCancelable, SingleAssignCancelable}
+import monix.execution.cancelables.{ AssignableCancelable, SingleAssignCancelable }
 import monix.reactive.Consumer
 import monix.reactive.observers.Subscriber
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], Long] {

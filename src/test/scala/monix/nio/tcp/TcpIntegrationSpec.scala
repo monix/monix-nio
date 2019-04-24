@@ -1,16 +1,16 @@
 package monix.nio.tcp
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{ InetAddress, InetSocketAddress }
 
 import minitest.SimpleTestSuite
 import monix.eval.Task
-import monix.execution.Ack.{Continue, Stop}
+import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.Callback
 import monix.execution.atomic.Atomic
-import monix.reactive.{Consumer, Observable}
+import monix.reactive.{ Consumer, Observable }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{ Await, Future, Promise }
 
 object TcpIntegrationSpec extends SimpleTestSuite {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
@@ -72,7 +72,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       _ <- server.bind(new InetSocketAddress(InetAddress.getByName(null), 9000))
       conn <- server.accept()
       read <- readAsync(conn, chunkSize)
-        .guaranteeCaseF(_ => server.close())
+        .guaranteeCase(_ => server.close())
         .consumeWith(Consumer.foreach(recvBytes => recv.append(new String(recvBytes))))
     } yield {
       read
@@ -108,7 +108,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
             conn <- Task.now(readWriteAsync(tsc))
             reader <- conn.tcpObservable
             writer <- conn.tcpConsumer
-            written <- reader.guaranteeCaseF(_ => conn.stopWriting()).consumeWith(writer)
+            written <- reader.guaranteeCase(_ => conn.stopWriting()).consumeWith(writer)
             _ <- conn.close()
           } yield {
             written
@@ -131,7 +131,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
           val readT = for {
             reader <- client.tcpObservable
             _ <- Task.now(reader
-              .guaranteeCaseF(_ => client.close())
+              .guaranteeCase(_ => client.close())
               .subscribe(
                 bytes => { echo.append(new String(bytes)); Continue },
                 err => rp.failure(err),
@@ -143,7 +143,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       val doneP = Promise[Boolean]()
       Task {
         handlers
-          .guaranteeCaseF(_ => taskServerSocketChannel.close())
+          .guaranteeCase(_ => taskServerSocketChannel.close())
           .publish
           .connect()
       }.runToFuture
@@ -173,7 +173,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map {
       _
-        .guaranteeCaseF[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .guaranteeCase(_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
         .subscribe(
           (bytes: Array[Byte]) => {
             recv.append(new String(bytes, "UTF-8"))
@@ -206,7 +206,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>
       reader
-        .guaranteeCaseF[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .guaranteeCase(_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
         .subscribe(
           (bytes: Array[Byte]) => {
             recv.append(new String(bytes, "UTF-8"))

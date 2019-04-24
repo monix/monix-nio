@@ -20,7 +20,7 @@ package monix.nio.file
 import java.nio.ByteBuffer
 
 import monix.eval.Task
-import monix.execution.{Callback, Scheduler}
+import monix.execution.{ Callback, Scheduler }
 import monix.execution.atomic.Atomic
 import monix.nio.AsyncChannel
 

@@ -20,12 +20,12 @@ package monix.nio
 import java.nio.ByteBuffer
 
 import monix.eval.Task
-import monix.execution.Ack.{Continue, Stop}
-import monix.execution.{Callback, Cancelable, Scheduler}
+import monix.execution.Ack.{ Continue, Stop }
+import monix.execution.{ Callback, Cancelable, Scheduler }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.exceptions.APIContractViolationException
-import monix.nio.internal.{Bytes, EmptyBytes, NonEmptyBytes}
+import monix.nio.internal.{ Bytes, EmptyBytes, NonEmptyBytes }
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 

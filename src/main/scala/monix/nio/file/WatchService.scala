@@ -1,13 +1,13 @@
 package monix.nio.file
 
-import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY}
+import java.nio.file.StandardWatchEventKinds.{ ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY }
 import java.nio.file.WatchEvent.Kind
-import java.nio.file.{Path, WatchEvent, WatchKey}
+import java.nio.file.{ Path, WatchEvent, WatchKey }
 
 import com.sun.nio.file.SensitivityWatchEventModifier
-import monix.execution.{Callback, Cancelable, Scheduler}
+import monix.execution.{ Callback, Cancelable, Scheduler }
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration.TimeUnit
 import scala.util.control.NonFatal
 

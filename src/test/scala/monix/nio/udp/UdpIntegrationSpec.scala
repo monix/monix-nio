@@ -30,7 +30,7 @@ object UdpIntegrationSpec extends SimpleTestSuite {
         packet.foreach(p => recv.append(new String(p.data)))
         packet
       }
-      .guaranteeCaseF(_ => readsPromise.success(recv.mkString))
+      .guaranteeCase(_ => Task(readsPromise.success(recv.mkString)))
       .subscribe(_.fold[Ack](Stop)(_ => Continue))
 
     val program = for {

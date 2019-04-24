@@ -17,7 +17,7 @@
 
 package monix.nio.file
 
-import java.nio.file.{Files, Paths, StandardOpenOption}
+import java.nio.file.{ Files, Paths, StandardOpenOption }
 import java.util
 
 import minitest.SimpleTestSuite
@@ -25,7 +25,7 @@ import monix.execution.Callback
 import monix.nio.file
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 import scala.util.control.NonFatal
 
 object IntegrationTest extends SimpleTestSuite {

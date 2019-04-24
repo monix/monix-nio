@@ -1,13 +1,13 @@
 package monix.nio.tcp
 
-import java.net.{InetSocketAddress, StandardSocketOptions}
+import java.net.{ InetSocketAddress, StandardSocketOptions }
 import java.nio.channels.spi.AsynchronousChannelProvider
-import java.nio.channels.{AsynchronousChannelGroup, AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler}
+import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler }
 import java.util.concurrent.Executors
 
-import monix.execution.{Callback, Cancelable, Scheduler}
+import monix.execution.{ Callback, Cancelable, Scheduler }
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 /**

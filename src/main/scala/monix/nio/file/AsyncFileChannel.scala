@@ -19,13 +19,13 @@ package monix.nio.file
 
 import java.io.File
 import java.nio.ByteBuffer
-import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
+import java.nio.channels.{ AsynchronousFileChannel, CompletionHandler }
 import java.nio.file.StandardOpenOption
 
-import monix.execution.{Callback, Cancelable, Scheduler}
+import monix.execution.{ Callback, Cancelable, Scheduler }
 import monix.nio.internal.ExecutorServiceWrapper
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.concurrent.blocking
 import scala.util.control.NonFatal
 

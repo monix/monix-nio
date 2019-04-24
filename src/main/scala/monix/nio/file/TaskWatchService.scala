@@ -1,10 +1,10 @@
 package monix.nio.file
 
 import java.nio.file.WatchEvent.Kind
-import java.nio.file.{Path, WatchKey}
+import java.nio.file.{ Path, WatchKey }
 
 import monix.eval.Task
-import monix.execution.{Callback, Scheduler}
+import monix.execution.{ Callback, Scheduler }
 
 import scala.concurrent.duration.TimeUnit
 

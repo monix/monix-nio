@@ -17,19 +17,19 @@
 
 package monix.nio.file
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{ Files, Paths }
 import java.util
 
 import minitest.SimpleTestSuite
 import monix.eval.Task
 import monix.execution.Callback
-import monix.execution.Scheduler.Implicits.{global => ctx}
+import monix.execution.Scheduler.Implicits.{ global => ctx }
 import monix.nio.file
-import monix.nio.text.UTF8Codec.{utf8Decode, utf8Encode}
+import monix.nio.text.UTF8Codec.{ utf8Decode, utf8Encode }
 import monix.reactive.Observable
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{ Await, Promise }
 
 object CodecTest extends SimpleTestSuite {
   test("decode file utf8") {

@@ -17,7 +17,7 @@
 
 package monix.nio.file
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{ Files, Paths }
 
 import minitest.TestSuite
 import monix.execution.Callback

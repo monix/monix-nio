@@ -3,11 +3,11 @@ package monix.nio
 import java.nio.file.WatchEvent
 
 import monix.eval.Task
-import monix.execution.Ack.{Continue, Stop}
+import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.exceptions.APIContractViolationException
-import monix.execution.{Callback, Cancelable, Scheduler}
+import monix.execution.{ Callback, Cancelable, Scheduler }
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 

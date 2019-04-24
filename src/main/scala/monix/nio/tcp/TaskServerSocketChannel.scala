@@ -3,7 +3,7 @@ package monix.nio.tcp
 import java.net.InetSocketAddress
 
 import monix.eval.Task
-import monix.execution.{Callback, Scheduler}
+import monix.execution.{ Callback, Scheduler }
 
 /**
   * A `Task` based asynchronous channel for stream-oriented listening sockets.
