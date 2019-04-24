@@ -33,6 +33,9 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
       "TestScheduler should have no pending tasks")
   }
 
+  //we need these ticks for a complete run of an elem
+  private val ticksPerElem = 2
+
   def tick(n: Int)(implicit s: TestScheduler) = (1 to n) map (_ => s.tickOne())
 
   test("full parse") { implicit s =>
@@ -71,14 +74,12 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     val cancelable = reader.consumeWith(consumer).runToFuture
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assertEquals(writeTo.get.size, 1)
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
 
     //check 2 reads have occurred
     assert(writeTo.get.size == 2)
@@ -119,8 +120,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     }
     reader.consumeWith(consumer).runAsync(callback)
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assertEquals(writeTo.get.size, 1)
@@ -159,8 +159,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     }
     reader.consumeWith(consumer).runAsync(callback)
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assertEquals(writeTo.get.size, 1)
