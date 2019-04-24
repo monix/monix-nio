@@ -36,8 +36,8 @@ object WatchServiceTest extends SimpleTestSuite {
       temp.delete()
     }
 
-    watchT.runAsync
-    fileT.runAsync
+    watchT.runToFuture
+    fileT.runToFuture
 
     val result = Await.result(watchP.future, 20.seconds)
     assert(result)

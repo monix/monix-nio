@@ -17,10 +17,10 @@
 
 package monix.nio.file
 
-import java.nio.file.{ Files, Paths }
+import java.nio.file.{Files, Paths}
 
 import minitest.TestSuite
-import monix.eval.Callback
+import monix.execution.Callback
 import monix.execution.atomic.Atomic
 import monix.execution.schedulers.TestScheduler
 
@@ -48,7 +48,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
-    reader.consumeWith(consumer).runAsync
+    reader.consumeWith(consumer).runToFuture
     s.tick()
     assert(readChannel.isClosed)
     assert(writeChannel.isClosed)
@@ -69,7 +69,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
-    val cancelable = reader.consumeWith(consumer).runAsync
+    val cancelable = reader.consumeWith(consumer).runToFuture
 
     //we need 3 ticks for a complete run of an elem
     tick(3)
@@ -112,7 +112,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     val callbackErrorCalled = Atomic(false)
-    val callback = new Callback[Long] {
+    val callback = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = ()
 
       override def onError(ex: Throwable): Unit = callbackErrorCalled.set(true)
@@ -153,7 +153,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     val callbackErrorCalled = Atomic(false)
-    val callback = new Callback[Long] {
+    val callback = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = ()
       override def onError(ex: Throwable): Unit = callbackErrorCalled.set(true)
     }

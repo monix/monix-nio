@@ -12,7 +12,7 @@ import sbtrelease.{Version, versionFormatError}
 
 addCommandAlias("release", ";+publishSigned ;sonatypeReleaseAll")
 
-val monixVersion = "3.0.0-M3"
+val monixVersion = "3.0.0-RC2"
 
 val appSettings = Seq(
   name := "monix-nio",

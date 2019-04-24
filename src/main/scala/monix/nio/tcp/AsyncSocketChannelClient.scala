@@ -66,7 +66,7 @@ final class AsyncSocketChannelClient(
           scheduler.reportFailure(t)
           connectedSignal.failure(t)
         }
-        .runAsync
+        .runToFuture
     }
 
   private[this] lazy val asyncTcpClientObservable =

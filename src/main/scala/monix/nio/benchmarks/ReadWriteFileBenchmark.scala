@@ -73,7 +73,7 @@ class ReadWriteFileBenchmark {
     val program = Observable
       .fromIterable(chunks1)
       .consumeWith(writeAsync(to))
-    Await.result(program.runAsync, Duration.Inf)
+    Await.result(program.runToFuture, Duration.Inf)
   }
 
   @Benchmark
@@ -82,7 +82,7 @@ class ReadWriteFileBenchmark {
     val program = Observable
       .fromIterable(chunks100)
       .consumeWith(writeAsync(to))
-    Await.result(program.runAsync, Duration.Inf)
+    Await.result(program.runToFuture, Duration.Inf)
   }
 
   @Benchmark
@@ -91,7 +91,7 @@ class ReadWriteFileBenchmark {
     val program = Observable
       .fromIterable(chunks1000)
       .consumeWith(writeAsync(to))
-    Await.result(program.runAsync, Duration.Inf)
+    Await.result(program.runToFuture, Duration.Inf)
   }
 
   @Benchmark
@@ -100,7 +100,7 @@ class ReadWriteFileBenchmark {
     val program = Observable
       .fromIterable(List(rawBytes))
       .consumeWith(writeAsync(to))
-    Await.result(program.runAsync, Duration.Inf)
+    Await.result(program.runToFuture, Duration.Inf)
   }
 
   @Benchmark

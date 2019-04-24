@@ -2,8 +2,8 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 
-import monix.eval.{ Callback, Task }
-import monix.execution.Scheduler
+import monix.eval.Task
+import monix.execution.{Callback, Scheduler}
 
 /**
   * A `Task` based asynchronous channel for stream-oriented listening sockets.
@@ -47,9 +47,9 @@ abstract class TaskServerSocketChannel {
 
   /** $acceptDesc */
   def accept(): Task[TaskSocketChannel] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      asyncServerSocketChannel.accept(new Callback[AsyncSocketChannel] {
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      asyncServerSocketChannel.accept(new Callback[Throwable, AsyncSocketChannel] {
         override def onError(ex: Throwable): Unit = cb.onError(ex)
         override def onSuccess(value: AsyncSocketChannel): Unit = cb.onSuccess(
           new TaskSocketChannel {

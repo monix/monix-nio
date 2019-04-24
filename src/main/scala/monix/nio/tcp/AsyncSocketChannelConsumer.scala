@@ -19,7 +19,7 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 
-import monix.eval.{ Callback, Task }
+import monix.execution.Callback
 import monix.nio.AsyncChannelConsumer
 
 import scala.concurrent.Promise
@@ -55,7 +55,7 @@ final class AsyncSocketChannelConsumer private[tcp] (
     if (taskSocketChannel.isDefined) {
       connectedPromise.success(())
     } else {
-      val connectCallback = new Callback[Unit]() {
+      val connectCallback = new Callback[Throwable, Unit]() {
         override def onSuccess(value: Unit): Unit = {
           connectedPromise.success(())
         }

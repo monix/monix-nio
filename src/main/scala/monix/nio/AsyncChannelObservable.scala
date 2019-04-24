@@ -19,13 +19,13 @@ package monix.nio
 
 import java.nio.ByteBuffer
 
-import monix.eval.{ Callback, Task }
-import monix.execution.Ack.{ Continue, Stop }
-import monix.execution.{ Cancelable, Scheduler }
+import monix.eval.Task
+import monix.execution.Ack.{Continue, Stop}
+import monix.execution.{Callback, Cancelable, Scheduler}
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.exceptions.APIContractViolationException
-import monix.nio.internal.{ Bytes, EmptyBytes, NonEmptyBytes }
+import monix.nio.internal.{Bytes, EmptyBytes, NonEmptyBytes}
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 
@@ -55,7 +55,7 @@ private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte
   private def startReading(subscriber: Subscriber[Array[Byte]]): Cancelable = {
     import subscriber.scheduler
 
-    val taskCallback = new Callback[Array[Byte]]() {
+    val taskCallback = new Callback[Throwable, Array[Byte]]() {
       override def onSuccess(value: Array[Byte]): Unit = {
         channel.collect { case sc if sc.closeOnComplete => closeChannel() }
       }
@@ -107,5 +107,5 @@ private[nio] abstract class AsyncChannelObservable extends Observable[Array[Byte
   }
 
   private[nio] final def closeChannel()(implicit scheduler: Scheduler) =
-    channel.foreach(_.close().runAsync)
+    channel.foreach(_.close().runToFuture)
 }

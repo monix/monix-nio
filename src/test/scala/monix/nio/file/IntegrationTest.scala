@@ -17,15 +17,15 @@
 
 package monix.nio.file
 
-import java.nio.file.{ Files, Paths, StandardOpenOption }
+import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util
 
 import minitest.SimpleTestSuite
-import monix.eval.Callback
+import monix.execution.Callback
 import monix.nio.file
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{Await, Promise}
 import scala.util.control.NonFatal
 
 object IntegrationTest extends SimpleTestSuite {
@@ -36,7 +36,7 @@ object IntegrationTest extends SimpleTestSuite {
     val to = Paths.get("src/test/resources/out.txt")
     val consumer = file.writeAsync(to)
     val p = Promise[Boolean]()
-    val callback = new Callback[Long] {
+    val callback = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = p.success(true)
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }
@@ -68,7 +68,7 @@ object IntegrationTest extends SimpleTestSuite {
     }
     val consumer = file.appendAsync(to, Files.size(to))
     val p = Promise[Boolean]()
-    val callback = new Callback[Long] {
+    val callback = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = p.success(true)
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }

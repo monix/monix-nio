@@ -19,14 +19,13 @@ package monix.nio.file
 
 import java.io.File
 import java.nio.ByteBuffer
-import java.nio.channels.{ AsynchronousFileChannel, CompletionHandler }
+import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.StandardOpenOption
 
-import monix.eval.Callback
-import monix.execution.{ Cancelable, Scheduler }
+import monix.execution.{Callback, Cancelable, Scheduler}
 import monix.nio.internal.ExecutorServiceWrapper
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.blocking
 import scala.util.control.NonFatal
 
@@ -101,7 +100,7 @@ abstract class AsyncFileChannel extends AutoCloseable {
   def isOpen: Boolean
 
   /** $sizeDesc */
-  def size(cb: Callback[Long]): Unit
+  def size(cb: Callback[Throwable, Long]): Unit
 
   /** $sizeDesc */
   def size: Future[Long] = {
@@ -117,7 +116,7 @@ abstract class AsyncFileChannel extends AutoCloseable {
     * @param position $readPositionDesc
     * @param cb $callbackDesc . For this method it signals $readReturnDesc
     */
-  def read(dst: ByteBuffer, position: Long, cb: Callback[Int]): Unit
+  def read(dst: ByteBuffer, position: Long, cb: Callback[Throwable, Int]): Unit
 
   /**
     * $readDesc
@@ -140,7 +139,7 @@ abstract class AsyncFileChannel extends AutoCloseable {
     * @param position $writePositionDesc
     * @param cb $callbackDesc . For this method it signals $writeReturnDesc
     */
-  def write(src: ByteBuffer, position: Long, cb: Callback[Int]): Unit
+  def write(src: ByteBuffer, position: Long, cb: Callback[Throwable, Int]): Unit
 
   /**
     * $writeDesc
@@ -163,7 +162,7 @@ abstract class AsyncFileChannel extends AutoCloseable {
     * @param cb is a callback to be called when the asynchronous
     * operation succeeds, or for signaling errors
     */
-  def flush(writeMetaData: Boolean, cb: Callback[Unit]): Unit
+  def flush(writeMetaData: Boolean, cb: Callback[Throwable, Unit]): Unit
 
   /**
     * $flushDesc
@@ -213,7 +212,7 @@ object AsyncFileChannel {
     override def close(): Unit =
       cancelable.cancel()
 
-    override def size(cb: Callback[Long]): Unit =
+    override def size(cb: Callback[Throwable, Long]): Unit =
       scheduler.executeAsync { () =>
         var streamErrors = true
         try {
@@ -227,7 +226,7 @@ object AsyncFileChannel {
         }
       }
 
-    override def read(dst: ByteBuffer, position: Long, cb: Callback[Int]): Unit = {
+    override def read(dst: ByteBuffer, position: Long, cb: Callback[Throwable, Int]): Unit = {
       require(position >= 0, "position >= 0")
       require(!dst.isReadOnly, "!dst.isReadOnly")
       try {
@@ -238,13 +237,13 @@ object AsyncFileChannel {
       }
     }
 
-    override def write(src: ByteBuffer, position: Long, cb: Callback[Int]): Unit = {
+    override def write(src: ByteBuffer, position: Long, cb: Callback[Throwable, Int]): Unit = {
       require(position >= 0, "position >= 0")
       try underlying.write(src, position, cb, completionHandler)
       catch { case NonFatal(ex) => cb.onError(ex) }
     }
 
-    override def flush(metaData: Boolean, cb: Callback[Unit]): Unit =
+    override def flush(metaData: Boolean, cb: Callback[Throwable, Unit]): Unit =
       scheduler.executeAsync { () =>
         try blocking {
           underlying.force(true)
@@ -256,10 +255,10 @@ object AsyncFileChannel {
       }
 
     private[this] val completionHandler =
-      new CompletionHandler[Integer, Callback[Int]] {
-        def completed(result: Integer, cb: Callback[Int]): Unit =
+      new CompletionHandler[Integer, Callback[Throwable, Int]] {
+        def completed(result: Integer, cb: Callback[Throwable, Int]): Unit =
           cb.onSuccess(result)
-        def failed(exc: Throwable, cb: Callback[Int]): Unit =
+        def failed(exc: Throwable, cb: Callback[Throwable, Int]): Unit =
           cb.onError(exc)
       }
   }

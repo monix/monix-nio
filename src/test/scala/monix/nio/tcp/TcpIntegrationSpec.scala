@@ -1,15 +1,16 @@
 package monix.nio.tcp
 
-import java.net.{ InetAddress, InetSocketAddress }
+import java.net.{InetAddress, InetSocketAddress}
 
 import minitest.SimpleTestSuite
-import monix.eval.{ Callback, Task }
-import monix.execution.Ack.{ Continue, Stop }
+import monix.eval.Task
+import monix.execution.Ack.{Continue, Stop}
+import monix.execution.Callback
 import monix.execution.atomic.Atomic
-import monix.reactive.{ Consumer, Observable }
+import monix.reactive.{Consumer, Observable}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{Await, Future, Promise}
 
 object TcpIntegrationSpec extends SimpleTestSuite {
   implicit val ctx = monix.execution.Scheduler.Implicits.global
@@ -44,12 +45,12 @@ object TcpIntegrationSpec extends SimpleTestSuite {
           () => rp.success(true))
       }
 
-      writeT.runAsync(new Callback[Int] {
+      writeT.runAsync(new Callback[Throwable, Int] {
         override def onError(ex: Throwable) = wp.failure(ex)
         override def onSuccess(value: Int) = wp.success(value == data.array().length)
       })
-      readT.runAsync
-    }.runAsync
+      readT.runToFuture
+    }.runToFuture
 
     val result = Await.result(Future.sequence(Seq(rp.future, wp.future)), 5.seconds)
     assert(result.forall(r => r))
@@ -61,7 +62,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
 
     val recv = new StringBuilder()
     val pw = Promise[Boolean]()
-    val callbackW = new Callback[Unit] {
+    val callbackW = new Callback[Throwable, Unit] {
       override def onSuccess(value: Unit): Unit = pw.success(data.flatten.length == recv.length)
       override def onError(ex: Throwable): Unit = pw.failure(ex)
     }
@@ -71,7 +72,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       _ <- server.bind(new InetSocketAddress(InetAddress.getByName(null), 9000))
       conn <- server.accept()
       read <- readAsync(conn, chunkSize)
-        .doOnTerminateEval[Task](_ => server.close())
+        .guaranteeCaseF(_ => server.close())
         .consumeWith(Consumer.foreach(recvBytes => recv.append(new String(recvBytes))))
     } yield {
       read
@@ -79,7 +80,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     readT.runAsync(callbackW)
 
     val pr = Promise[Boolean]()
-    val callbackR = new Callback[Long] {
+    val callbackR = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = pr.success(data.flatten.length == value)
       override def onError(ex: Throwable): Unit = pr.failure(ex)
     }
@@ -87,7 +88,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val tcpConsumer = writeAsync("localhost", 9000)
     Observable
       .fromIterable(data)
-      .flatMap(all => Observable.fromIterator(all.grouped(chunkSize)))
+      .flatMap(all => Observable.fromIterator(Task(all.grouped(chunkSize))))
       .consumeWith(tcpConsumer)
       .runAsync(callbackR)
 
@@ -101,13 +102,13 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val program = asyncServer(InetAddress.getByName(null).getHostName, 9000).flatMap { taskServerSocketChannel =>
       val handlers = Observable
         .fromIterable(1 to noOfClients)
-        .mapTask(_ => taskServerSocketChannel.accept())
+        .mapEval(_ => taskServerSocketChannel.accept())
         .mapParallelUnordered(4) { tsc =>
           for {
             conn <- Task.now(readWriteAsync(tsc))
             reader <- conn.tcpObservable
             writer <- conn.tcpConsumer
-            written <- reader.doOnTerminateEval[Task](_ => conn.stopWriting()).consumeWith(writer)
+            written <- reader.guaranteeCaseF(_ => conn.stopWriting()).consumeWith(writer)
             _ <- conn.close()
           } yield {
             written
@@ -130,7 +131,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
           val readT = for {
             reader <- client.tcpObservable
             _ <- Task.now(reader
-              .doOnTerminateEval[Task](_ => client.close())
+              .guaranteeCaseF(_ => client.close())
               .subscribe(
                 bytes => { echo.append(new String(bytes)); Continue },
                 err => rp.failure(err),
@@ -142,10 +143,10 @@ object TcpIntegrationSpec extends SimpleTestSuite {
       val doneP = Promise[Boolean]()
       Task {
         handlers
-          .doOnTerminateEval[Task](_ => taskServerSocketChannel.close())
+          .guaranteeCaseF(_ => taskServerSocketChannel.close())
           .publish
           .connect()
-      }.runAsync
+      }.runToFuture
 
       Task {
         clients.subscribe(
@@ -158,11 +159,11 @@ object TcpIntegrationSpec extends SimpleTestSuite {
             taskServerSocketChannel.close()
             doneP.success(echoed.get)
           })
-      }.runAsync
+      }.runToFuture
 
       Task.fromFuture(doneP.future)
     }
-    assert(Await.result(program.runAsync, 10.seconds))
+    assert(Await.result(program.runToFuture, 10.seconds))
   }
 
   test("be able to make a HTTP GET request and pipe the response back") {
@@ -172,7 +173,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map {
       _
-        .doOnTerminateEval[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .guaranteeCaseF[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
         .subscribe(
           (bytes: Array[Byte]) => {
             recv.append(new String(bytes, "UTF-8"))
@@ -183,14 +184,14 @@ object TcpIntegrationSpec extends SimpleTestSuite {
             }
           },
           err => p.failure(err))
-    }.runAsync
+    }.runToFuture
 
     /* trigger a response to be read */
     val request = "GET /get?tcp=monix HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\n\r\n"
     asyncTcpClient.tcpConsumer.flatMap { writer =>
       val data = request.getBytes("UTF-8").grouped(256 * 1024).toArray
       Observable.fromIterable(data).consumeWith(writer)
-    }.runAsync
+    }.runToFuture
 
     val result = Await.result(p.future, 10.seconds)
     assert(result.length > 0)
@@ -205,7 +206,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     val recv = new StringBuffer("")
     asyncTcpClient.tcpObservable.map { reader =>
       reader
-        .doOnTerminateEval[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
+        .guaranteeCaseF[Task](_ => asyncTcpClient.close().map(_ => p.success(recv.toString))) // cleanup
         .subscribe(
           (bytes: Array[Byte]) => {
             recv.append(new String(bytes, "UTF-8"))
@@ -216,7 +217,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
             }
           },
           err => p.failure(err))
-    }.runAsync
+    }.runToFuture
 
     // test with small chunks (2 bytes) to test order
     def data(request: String) = request.getBytes("UTF-8").grouped(2).toArray
@@ -232,7 +233,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
     }
 
     // trigger response to be read
-    writeT.runAsync
+    writeT.runToFuture
 
     val result = Await.result(p.future, 20.seconds)
     assert(result.length > 0)

@@ -1,14 +1,13 @@
 package monix.nio.file
 
-import java.nio.file.StandardWatchEventKinds.{ ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY }
+import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY}
 import java.nio.file.WatchEvent.Kind
-import java.nio.file.{ Path, WatchEvent, WatchKey }
+import java.nio.file.{Path, WatchEvent, WatchKey}
 
 import com.sun.nio.file.SensitivityWatchEventModifier
-import monix.eval.Callback
-import monix.execution.{ Cancelable, Scheduler }
+import monix.execution.{Callback, Cancelable, Scheduler}
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.TimeUnit
 import scala.util.control.NonFatal
 
@@ -22,7 +21,7 @@ import scala.util.control.NonFatal
   *
   */
 abstract class WatchService extends AutoCloseable {
-  def poll(timeout: Long, timeUnit: TimeUnit, cb: Callback[Option[WatchKey]]): Unit
+  def poll(timeout: Long, timeUnit: TimeUnit, cb: Callback[Throwable, Option[WatchKey]]): Unit
 
   def poll(timeout: Long, timeUnit: TimeUnit): Future[Option[WatchKey]] = {
     val p = Promise[Option[WatchKey]]()
@@ -30,7 +29,7 @@ abstract class WatchService extends AutoCloseable {
     p.future
   }
 
-  def poll(cb: Callback[Option[WatchKey]]): Unit
+  def poll(cb: Callback[Throwable, Option[WatchKey]]): Unit
 
   def poll(): Future[Option[WatchKey]] = {
     val p = Promise[Option[WatchKey]]()
@@ -38,7 +37,7 @@ abstract class WatchService extends AutoCloseable {
     p.future
   }
 
-  def take(cb: Callback[WatchKey]): Unit
+  def take(cb: Callback[Throwable, WatchKey]): Unit
 
   def take(): Future[WatchKey] = {
     val p = Promise[WatchKey]()
@@ -63,7 +62,7 @@ object WatchService {
   }
 
   private final class NIOWatcherServiceImplementation(watcher: java.nio.file.WatchService)(implicit scheduler: Scheduler) extends WatchService {
-    override def poll(timeout: Long, timeUnit: TimeUnit, cb: Callback[Option[WatchKey]]): Unit = {
+    override def poll(timeout: Long, timeUnit: TimeUnit, cb: Callback[Throwable, Option[WatchKey]]): Unit = {
       try {
         val key = Option(watcher.poll(timeout, timeUnit))
         cb.onSuccess(key)
@@ -73,7 +72,7 @@ object WatchService {
       }
     }
 
-    override def poll(cb: Callback[Option[WatchKey]]): Unit = {
+    override def poll(cb: Callback[Throwable, Option[WatchKey]]): Unit = {
       try {
         val key = Option(watcher.poll())
         cb.onSuccess(key)
@@ -83,7 +82,7 @@ object WatchService {
       }
     }
 
-    override def take(cb: Callback[WatchKey]): Unit = {
+    override def take(cb: Callback[Throwable, WatchKey]): Unit = {
       try {
         val key = watcher.take()
         cb.onSuccess(key)

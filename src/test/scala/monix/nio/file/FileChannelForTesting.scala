@@ -19,8 +19,8 @@ package monix.nio.file
 
 import java.nio.ByteBuffer
 
-import monix.eval.{ Callback, Task }
-import monix.execution.Scheduler
+import monix.eval.Task
+import monix.execution.{Callback, Scheduler}
 import monix.execution.atomic.Atomic
 import monix.nio.AsyncChannel
 
@@ -56,15 +56,15 @@ class FileChannelForTesting(
     def createReadException() = readException.set(true)
     def createWriteException() = writeException.set(true)
 
-    def taskCallback(handler: Callback[Int]) = new Callback[Array[Byte]]() {
+    def taskCallback(handler: Callback[Throwable, Int]) = new Callback[Throwable, Array[Byte]]() {
       override def onSuccess(value: Array[Byte]): Unit = handler.onSuccess(value.length)
       override def onError(ex: Throwable): Unit = handler.onError(ex)
     }
 
     override def isOpen: Boolean = !isClosed
-    override def flush(writeMetaData: Boolean, cb: Callback[Unit]): Unit = ???
-    override def size(cb: Callback[Long]): Unit = () //not really used
-    override def read(dst: ByteBuffer, position: Long, handler: Callback[Int]) = {
+    override def flush(writeMetaData: Boolean, cb: Callback[Throwable, Unit]): Unit = ???
+    override def size(cb: Callback[Throwable, Long]): Unit = () //not really used
+    override def read(dst: ByteBuffer, position: Long, handler: Callback[Throwable, Int]) = {
       if (readException.get) handler.onError(new Exception("Test Exception"))
       else if (readChannelPosition.get < readingSeq.size) {
         val pos = readChannelPosition.getAndIncrement()
@@ -80,7 +80,7 @@ class FileChannelForTesting(
       }
 
     }
-    override def write(b: ByteBuffer, position: Long, handler: Callback[Int]) = {
+    override def write(b: ByteBuffer, position: Long, handler: Callback[Throwable, Int]) = {
       if (writeException.get) handler.onError(new Exception("Test Exception"))
       else {
         val pos = writeChannelPosition.getAndIncrement()
