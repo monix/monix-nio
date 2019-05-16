@@ -119,6 +119,8 @@ val appSettings = Seq(
 
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
 
+  updateOptions := updateOptions.value.withGigahorse(false),
+    
   // -- Settings meant for deployment on oss.sonatype.org
 
   useGpg := false,
