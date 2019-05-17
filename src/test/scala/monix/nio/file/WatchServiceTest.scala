@@ -16,7 +16,7 @@ object WatchServiceTest extends SimpleTestSuite {
     val path = Paths.get(System.getProperty("java.io.tmpdir"))
 
     val watchP = Promise[Boolean]()
-    val watchT = Task {
+    val watchT = Task.evalAsync {
       watchAsync(path).timeoutOnSlowUpstream(10.seconds).subscribe(
         (events: Array[WatchEvent[_]]) => {
           val captured = events.find(e => s"${e.kind().name()} - ${e.context().toString}".contains("monix"))
@@ -30,7 +30,7 @@ object WatchServiceTest extends SimpleTestSuite {
         err => watchP.failure(err),
         () => watchP.success(true))
     }
-    val fileT = Task {
+    val fileT = Task.evalAsync {
       val temp = File.createTempFile("monix", ".tmp", path.toFile)
       Thread.sleep(2000)
       temp.delete()
