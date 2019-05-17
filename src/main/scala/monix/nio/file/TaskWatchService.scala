@@ -21,26 +21,20 @@ abstract class TaskWatchService {
 
   protected val watchService: WatchService
 
-  def poll(timeout: Long, timeUnit: TimeUnit): Task[Option[WatchKey]] = {
+  def poll(timeout: Long, timeUnit: TimeUnit): Task[Option[WatchKey]] =
     Task.create { (scheduler, cb) =>
-      implicit val s = scheduler
-      watchService.poll(timeout, timeUnit, Callback.forked(cb))
+      watchService.poll(timeout, timeUnit, Callback.forked(cb)(scheduler))
     }
-  }
 
-  def poll(): Task[Option[WatchKey]] = {
+  def poll(): Task[Option[WatchKey]] =
     Task.create { (scheduler, cb) =>
-      implicit val s = scheduler
-      watchService.poll(Callback.forked(cb))
+      watchService.poll(Callback.forked(cb)(scheduler))
     }
-  }
 
-  def take(): Task[WatchKey] = {
+  def take(): Task[WatchKey] =
     Task.create { (scheduler, cb) =>
-      implicit val s = scheduler
-      watchService.take(Callback.forked(cb))
+      watchService.take(Callback.forked(cb)(scheduler))
     }
-  }
 
   def close(): Task[Unit] =
     Task.now(watchService.close())

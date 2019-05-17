@@ -82,8 +82,7 @@ abstract class TaskFileChannel {
   /** $sizeDesc */
   def size: Task[Long] =
     Task.create { (scheduler, cb) =>
-      implicit val s = scheduler
-      asyncFileChannel.size(Callback.forked(cb))
+      asyncFileChannel.size(Callback.forked(cb)(scheduler))
     }
 
   /**
@@ -96,8 +95,7 @@ abstract class TaskFileChannel {
     */
   def read(dst: ByteBuffer, position: Long): Task[Int] =
     Task.create { (scheduler, cb) =>
-      implicit val s = scheduler
-      asyncFileChannel.read(dst, position, Callback.forked(cb))
+      asyncFileChannel.read(dst, position, Callback.forked(cb)(scheduler))
     }
 
   /**
@@ -110,8 +108,7 @@ abstract class TaskFileChannel {
     */
   def write(src: ByteBuffer, position: Long): Task[Int] =
     Task.create { (scheduler, cb) =>
-      implicit val s = scheduler
-      asyncFileChannel.write(src, position, Callback.forked(cb))
+      asyncFileChannel.write(src, position, Callback.forked(cb)(scheduler))
     }
 
   /**
@@ -121,8 +118,7 @@ abstract class TaskFileChannel {
     */
   def flush(writeMetaData: Boolean): Task[Unit] =
     Task.create { (scheduler, cb) =>
-      implicit val s = scheduler
-      asyncFileChannel.flush(writeMetaData, Callback.forked(cb))
+      asyncFileChannel.flush(writeMetaData, Callback.forked(cb)(scheduler))
     }
 
   /** $closeDesc */
