@@ -19,9 +19,8 @@ package monix.nio
 
 import java.nio.ByteBuffer
 
-import monix.eval.Callback
 import monix.execution.Ack.{ Continue, Stop }
-import monix.execution.{ Ack, Cancelable, Scheduler }
+import monix.execution.{ Ack, Callback, Cancelable, Scheduler }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.{ AssignableCancelable, SingleAssignCancelable }
 import monix.reactive.Consumer
@@ -35,7 +34,7 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
   def withInitialPosition: Long = 0l
   def init(subscriber: AsyncChannelSubscriber): Future[Unit] = Future.successful(())
 
-  class AsyncChannelSubscriber(consumerCallback: Callback[Long])(implicit val scheduler: Scheduler)
+  class AsyncChannelSubscriber(consumerCallback: Callback[Throwable, Long])(implicit val scheduler: Scheduler)
     extends Subscriber[Array[Byte]] { self =>
 
     private[this] lazy val initFuture = init(self)
@@ -50,7 +49,7 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
             sc
               .write(ByteBuffer.wrap(elem), position)
               .runAsync(
-                new Callback[Int] {
+                new Callback[Throwable, Int] {
                   override def onError(exc: Throwable) = {
                     closeChannel()
                     sendError(exc)
@@ -103,10 +102,10 @@ private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], L
       }
 
     private[nio] final def closeChannel()(implicit scheduler: Scheduler) =
-      channel.foreach(_.close().runAsync)
+      channel.foreach(_.close().runToFuture)
   }
 
-  override def createSubscriber(cb: Callback[Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
+  override def createSubscriber(cb: Callback[Throwable, Long], s: Scheduler): (Subscriber[Array[Byte]], AssignableCancelable) = {
     val out = new AsyncChannelSubscriber(cb)(s)
 
     val extraCancelable = Cancelable(() => out.onCancel())

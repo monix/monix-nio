@@ -3,7 +3,7 @@ package monix.nio.tcp
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 
-import monix.eval.{ Callback, Task }
+import monix.eval.Task
 import monix.execution.Scheduler
 
 import scala.concurrent.duration.Duration
@@ -60,8 +60,8 @@ abstract class TaskSocketChannel {
     * @param remote $remoteDesc
     */
   def connect(remote: InetSocketAddress): Task[Unit] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
       asyncSocketChannel.connect(remote, cb)
     }
 
@@ -84,8 +84,8 @@ abstract class TaskSocketChannel {
     * @return $readReturnDesc
     */
   def read(dst: ByteBuffer, timeout: Option[Duration] = None): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
       asyncSocketChannel.read(dst, cb, timeout)
     }
 
@@ -98,8 +98,8 @@ abstract class TaskSocketChannel {
     * @return $writeReturnDesc
     */
   def write(src: ByteBuffer, timeout: Option[Duration] = None): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
       asyncSocketChannel.write(src, cb, timeout)
     }
 

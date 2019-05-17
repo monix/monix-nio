@@ -23,8 +23,7 @@ import java.nio.channels.spi.AsynchronousChannelProvider
 import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousSocketChannel, CompletionHandler }
 import java.util.concurrent.{ Executors, TimeUnit }
 
-import monix.eval.Callback
-import monix.execution.{ Cancelable, Scheduler }
+import monix.execution.{ Callback, Cancelable, Scheduler }
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Future, Promise }
@@ -80,7 +79,7 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     * @param remote $remoteDesc
     * @param cb $callbackDesc
     */
-  def connect(remote: InetSocketAddress, cb: Callback[Unit]): Unit
+  def connect(remote: InetSocketAddress, cb: Callback[Throwable, Unit]): Unit
 
   /**
     * $connectDesc
@@ -106,7 +105,7 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     * @param cb $callbackDesc . For this method it signals $readReturnDesc
     * @param timeout $timeout
     */
-  def read(dst: ByteBuffer, cb: Callback[Int], timeout: Option[Duration] = None): Unit
+  def read(dst: ByteBuffer, cb: Callback[Throwable, Int], timeout: Option[Duration] = None): Unit
 
   /**
     * $readDesc
@@ -129,7 +128,7 @@ abstract class AsyncSocketChannel extends AutoCloseable {
     * @param cb $callbackDesc . For this method it signals $writeReturnDesc
     * @param timeout $timeout
     */
-  def write(src: ByteBuffer, cb: Callback[Int], timeout: Option[Duration] = None): Unit
+  def write(src: ByteBuffer, cb: Callback[Throwable, Int], timeout: Option[Duration] = None): Unit
 
   /**
     * $writeDesc
@@ -179,14 +178,14 @@ object AsyncSocketChannel {
   private lazy val acg =
     AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), -1)
 
-  private val connectHandler = new CompletionHandler[Void, Callback[Unit]] {
-    override def completed(result: Void, cb: Callback[Unit]) = cb.onSuccess(())
-    override def failed(exc: Throwable, cb: Callback[Unit]) = cb.onError(exc)
+  private val connectHandler = new CompletionHandler[Void, Callback[Throwable, Unit]] {
+    override def completed(result: Void, cb: Callback[Throwable, Unit]) = cb.onSuccess(())
+    override def failed(exc: Throwable, cb: Callback[Throwable, Unit]) = cb.onError(exc)
   }
 
-  private[this] val rwHandler = new CompletionHandler[Integer, Callback[Int]] {
-    override def completed(result: Integer, cb: Callback[Int]): Unit = cb.onSuccess(result)
-    override def failed(exc: Throwable, cb: Callback[Int]): Unit = cb.onError(exc)
+  private[this] val rwHandler = new CompletionHandler[Integer, Callback[Throwable, Int]] {
+    override def completed(result: Integer, cb: Callback[Throwable, Int]): Unit = cb.onSuccess(result)
+    override def failed(exc: Throwable, cb: Callback[Throwable, Int]): Unit = cb.onError(exc)
   }
 
   private[tcp] final case class NewIOImplementation(
@@ -226,7 +225,7 @@ object AsyncSocketChannel {
           }
       }
 
-    override def connect(remote: InetSocketAddress, cb: Callback[Unit]): Unit = {
+    override def connect(remote: InetSocketAddress, cb: Callback[Throwable, Unit]): Unit = {
       asyncSocketChannel.fold(_ => (), c => try c.connect(remote, cb, connectHandler) catch {
         case NonFatal(exc) =>
           cb.onError(exc)
@@ -249,7 +248,7 @@ object AsyncSocketChannel {
       })
     }
 
-    override def read(dst: ByteBuffer, cb: Callback[Int], timeout: Option[Duration]): Unit = {
+    override def read(dst: ByteBuffer, cb: Callback[Throwable, Int], timeout: Option[Duration]): Unit = {
       asyncSocketChannel.fold(_ => (), { c =>
         try {
           c.read(
@@ -265,7 +264,7 @@ object AsyncSocketChannel {
       })
     }
 
-    override def write(src: ByteBuffer, cb: Callback[Int], timeout: Option[Duration]): Unit = {
+    override def write(src: ByteBuffer, cb: Callback[Throwable, Int], timeout: Option[Duration]): Unit = {
       asyncSocketChannel.fold(_ => (), { c =>
         try {
           c.write(

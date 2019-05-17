@@ -20,7 +20,7 @@ package monix.nio.file
 import java.nio.file.{ Files, Paths }
 
 import minitest.TestSuite
-import monix.eval.Callback
+import monix.execution.Callback
 import monix.execution.atomic.Atomic
 import monix.execution.schedulers.TestScheduler
 
@@ -32,6 +32,9 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
       s.state.tasks.isEmpty,
       "TestScheduler should have no pending tasks")
   }
+
+  //we need these ticks for a complete run of an elem
+  private val ticksPerElem = 2
 
   def tick(n: Int)(implicit s: TestScheduler) = (1 to n) map (_ => s.tickOne())
 
@@ -48,7 +51,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
-    reader.consumeWith(consumer).runAsync
+    reader.consumeWith(consumer).runToFuture
     s.tick()
     assert(readChannel.isClosed)
     assert(writeChannel.isClosed)
@@ -69,16 +72,14 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val reader = new AsyncFileChannelObservable(readChannel, chunkSize)
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
-    val cancelable = reader.consumeWith(consumer).runAsync
+    val cancelable = reader.consumeWith(consumer).runToFuture
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assertEquals(writeTo.get.size, 1)
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
 
     //check 2 reads have occurred
     assert(writeTo.get.size == 2)
@@ -112,15 +113,14 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     val callbackErrorCalled = Atomic(false)
-    val callback = new Callback[Long] {
+    val callback = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = ()
 
       override def onError(ex: Throwable): Unit = callbackErrorCalled.set(true)
     }
     reader.consumeWith(consumer).runAsync(callback)
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assertEquals(writeTo.get.size, 1)
@@ -153,14 +153,13 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     val consumer = new AsyncFileChannelConsumer(writeChannel)
 
     val callbackErrorCalled = Atomic(false)
-    val callback = new Callback[Long] {
+    val callback = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = ()
       override def onError(ex: Throwable): Unit = callbackErrorCalled.set(true)
     }
     reader.consumeWith(consumer).runAsync(callback)
 
-    //we need 3 ticks for a complete run of an elem
-    tick(3)
+    tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assertEquals(writeTo.get.size, 1)

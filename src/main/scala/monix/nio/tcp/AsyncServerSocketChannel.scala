@@ -5,8 +5,7 @@ import java.nio.channels.spi.AsynchronousChannelProvider
 import java.nio.channels.{ AsynchronousChannelGroup, AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler }
 import java.util.concurrent.Executors
 
-import monix.eval.Callback
-import monix.execution.{ Cancelable, Scheduler }
+import monix.execution.{ Callback, Cancelable, Scheduler }
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
@@ -60,7 +59,7 @@ abstract class AsyncServerSocketChannel extends AutoCloseable {
     *
     * @param cb $callbackDesc
     */
-  def accept(cb: Callback[AsyncSocketChannel]): Unit
+  def accept(cb: Callback[Throwable, AsyncSocketChannel]): Unit
 
   /** $acceptDesc */
   def accept(): Future[AsyncSocketChannel] = {
@@ -119,15 +118,15 @@ object AsyncServerSocketChannel {
         Left(exc)
     }
 
-    private[this] val acceptHandler: CompletionHandler[AsynchronousSocketChannel, Callback[AsyncSocketChannel]] = {
-      new CompletionHandler[AsynchronousSocketChannel, Callback[AsyncSocketChannel]] {
-        override def completed(result: AsynchronousSocketChannel, attachment: Callback[AsyncSocketChannel]) =
+    private[this] val acceptHandler: CompletionHandler[AsynchronousSocketChannel, Callback[Throwable, AsyncSocketChannel]] = {
+      new CompletionHandler[AsynchronousSocketChannel, Callback[Throwable, AsyncSocketChannel]] {
+        override def completed(result: AsynchronousSocketChannel, attachment: Callback[Throwable, AsyncSocketChannel]) =
           attachment.onSuccess(new AsyncSocketChannel.NewIOImplementation(result))
-        override def failed(exc: Throwable, attachment: Callback[AsyncSocketChannel]) =
+        override def failed(exc: Throwable, attachment: Callback[Throwable, AsyncSocketChannel]) =
           attachment.onError(exc)
       }
     }
-    override def accept(cb: Callback[AsyncSocketChannel]): Unit = {
+    override def accept(cb: Callback[Throwable, AsyncSocketChannel]): Unit = {
       asynchronousServerSocketChannel.fold(_ => (), s => try s.accept(cb, acceptHandler) catch {
         case NonFatal(exc) =>
           cb.onError(exc)

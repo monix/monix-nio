@@ -19,18 +19,18 @@ object UdpIntegrationSpec extends SimpleTestSuite {
 
     val writes = (ch: TaskDatagramChannel, to: InetSocketAddress) => Observable
       .fromIterable(data)
-      .mapTask(data => ch.send(Packet(data.getBytes, to)))
+      .mapEval(data => ch.send(Packet(data.getBytes, to)))
 
     val readsPromise = Promise[String]()
     val recv = new StringBuilder("")
     val reads = (ch: TaskDatagramChannel, maxSize: Int) => Observable
       .repeatEval(ch.receive(maxSize, 2.seconds))
-      .mapTask(t => t)
+      .mapEval(t => t)
       .map { packet =>
         packet.foreach(p => recv.append(new String(p.data)))
         packet
       }
-      .doOnTerminate(_ => readsPromise.success(recv.mkString))
+      .guaranteeCase(_ => Task(readsPromise.success(recv.mkString)))
       .subscribe(_.fold[Ack](Stop)(_ => Continue))
 
     val program = for {
@@ -43,7 +43,7 @@ object UdpIntegrationSpec extends SimpleTestSuite {
       _ <- ch.close()
     } yield sent == 40 & received == data.mkString("")
 
-    val result = Await.result(program.runAsync, 10.seconds)
+    val result = Await.result(program.runToFuture, 10.seconds)
     assert(result)
   }
 }

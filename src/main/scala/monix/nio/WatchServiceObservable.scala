@@ -2,12 +2,12 @@ package monix.nio
 
 import java.nio.file.WatchEvent
 
-import monix.eval.{ Callback, Task }
+import monix.eval.Task
 import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.atomic.Atomic
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.exceptions.APIContractViolationException
-import monix.execution.{ Cancelable, Scheduler }
+import monix.execution.{ Callback, Cancelable, Scheduler }
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 
@@ -35,7 +35,7 @@ abstract class WatchServiceObservable extends Observable[Array[WatchEvent[_]]] {
   private def startPolling(subscriber: Subscriber[Array[WatchEvent[_]]]): Cancelable = {
     import subscriber.scheduler
 
-    val taskCallback = new Callback[Array[WatchEvent[_]]]() {
+    val taskCallback = new Callback[Throwable, Array[WatchEvent[_]]]() {
       override def onSuccess(value: Array[WatchEvent[_]]): Unit = {}
       override def onError(ex: Throwable): Unit = {
         subscriber.onError(ex)

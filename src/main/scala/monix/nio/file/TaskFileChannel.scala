@@ -4,8 +4,8 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.StandardOpenOption
 
-import monix.eval.{ Callback, Task }
-import monix.execution.{ Cancelable, Scheduler }
+import monix.eval.Task
+import monix.execution.{ Callback, Scheduler }
 
 /**
   * A `Task` based asynchronous channel for reading, writing, and manipulating a file.
@@ -81,9 +81,9 @@ abstract class TaskFileChannel {
 
   /** $sizeDesc */
   def size: Task[Long] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      asyncFileChannel.size(Callback.async(cb))
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      asyncFileChannel.size(Callback.forked(cb))
     }
 
   /**
@@ -95,9 +95,9 @@ abstract class TaskFileChannel {
     * @return $readReturnDesc
     */
   def read(dst: ByteBuffer, position: Long): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      asyncFileChannel.read(dst, position, Callback.async(cb))
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      asyncFileChannel.read(dst, position, Callback.forked(cb))
     }
 
   /**
@@ -109,9 +109,9 @@ abstract class TaskFileChannel {
     * @return $writeReturnDesc
     */
   def write(src: ByteBuffer, position: Long): Task[Int] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      asyncFileChannel.write(src, position, Callback.async(cb))
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      asyncFileChannel.write(src, position, Callback.forked(cb))
     }
 
   /**
@@ -120,9 +120,9 @@ abstract class TaskFileChannel {
     * @param writeMetaData $flushWriteMetaDesc
     */
   def flush(writeMetaData: Boolean): Task[Unit] =
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      asyncFileChannel.flush(writeMetaData, Callback.async(cb))
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      asyncFileChannel.flush(writeMetaData, Callback.forked(cb))
     }
 
   /** $closeDesc */

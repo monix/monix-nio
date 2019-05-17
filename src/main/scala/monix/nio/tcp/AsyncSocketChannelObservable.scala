@@ -19,7 +19,7 @@ package monix.nio.tcp
 
 import java.net.InetSocketAddress
 
-import monix.eval.Callback
+import monix.execution.Callback
 import monix.nio._
 import monix.reactive.observers.Subscriber
 
@@ -57,7 +57,7 @@ final class AsyncSocketChannelObservable private[tcp] (
     if (taskSocketChannel.isDefined) {
       connectedSignal.success(())
     } else {
-      val connectCallback = new Callback[Unit]() {
+      val connectCallback = new Callback[Throwable, Unit]() {
         override def onSuccess(value: Unit): Unit = {
           connectedSignal.success(())
         }

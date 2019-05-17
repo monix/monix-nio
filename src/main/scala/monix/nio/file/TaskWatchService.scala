@@ -3,8 +3,8 @@ package monix.nio.file
 import java.nio.file.WatchEvent.Kind
 import java.nio.file.{ Path, WatchKey }
 
-import monix.eval.{ Callback, Task }
-import monix.execution.Scheduler
+import monix.eval.Task
+import monix.execution.{ Callback, Scheduler }
 
 import scala.concurrent.duration.TimeUnit
 
@@ -22,23 +22,23 @@ abstract class TaskWatchService {
   protected val watchService: WatchService
 
   def poll(timeout: Long, timeUnit: TimeUnit): Task[Option[WatchKey]] = {
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      watchService.poll(timeout, timeUnit, Callback.async(cb))
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      watchService.poll(timeout, timeUnit, Callback.forked(cb))
     }
   }
 
   def poll(): Task[Option[WatchKey]] = {
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      watchService.poll(Callback.async(cb))
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      watchService.poll(Callback.forked(cb))
     }
   }
 
   def take(): Task[WatchKey] = {
-    Task.unsafeCreate { (context, cb) =>
-      implicit val s = context.scheduler
-      watchService.take(Callback.async(cb))
+    Task.create { (scheduler, cb) =>
+      implicit val s = scheduler
+      watchService.take(Callback.forked(cb))
     }
   }
 

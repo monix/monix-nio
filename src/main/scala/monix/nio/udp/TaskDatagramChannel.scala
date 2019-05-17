@@ -64,7 +64,7 @@ abstract class TaskDatagramChannel {
     *
     * @param local $localDesc
     */
-  def bind(local: InetSocketAddress): Task[Unit] = Task {
+  def bind(local: InetSocketAddress): Task[Unit] = Task.evalAsync {
     asyncDatagramChannel.bind(local)
   }
 
@@ -80,7 +80,7 @@ abstract class TaskDatagramChannel {
     *
     * @return $receiveReturnDesc
     */
-  def receive(maxSize: Int, timeout: FiniteDuration): Task[Option[Packet]] = Task {
+  def receive(maxSize: Int, timeout: FiniteDuration): Task[Option[Packet]] = Task.evalAsync {
     asyncDatagramChannel.receive(maxSize, timeout)
   }
 
@@ -89,7 +89,7 @@ abstract class TaskDatagramChannel {
     *
     * @param packet $sendSrcDesc
     */
-  def send(packet: Packet): Task[Int] = Task {
+  def send(packet: Packet): Task[Int] = Task.evalAsync {
     asyncDatagramChannel.send(packet)
   }
 

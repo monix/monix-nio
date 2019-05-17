@@ -21,7 +21,8 @@ import java.nio.file.{ Files, Paths }
 import java.util
 
 import minitest.SimpleTestSuite
-import monix.eval.Callback
+import monix.eval.Task
+import monix.execution.Callback
 import monix.execution.Scheduler.Implicits.{ global => ctx }
 import monix.nio.file
 import monix.nio.text.UTF8Codec.{ utf8Decode, utf8Encode }
@@ -35,7 +36,7 @@ object CodecTest extends SimpleTestSuite {
     val from = Paths.get(this.getClass.getResource("/testFiles/specialChars.txt").toURI)
 
     val p = Promise[Seq[Byte]]()
-    val callback = new Callback[List[Array[Byte]]] {
+    val callback = new Callback[Throwable, List[Array[Byte]]] {
       override def onSuccess(value: List[Array[Byte]]): Unit = p.success(value.flatten)
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }
@@ -57,11 +58,11 @@ object CodecTest extends SimpleTestSuite {
     for (grouping <- 1 to 12) {
       val obsSeq =
         Observable
-          .fromIterator(strSeq.flatMap(_.getBytes).grouped(grouping).map(_.toArray))
+          .fromIterator(Task(strSeq.flatMap(_.getBytes).grouped(grouping).map(_.toArray)))
           .pipeThrough(utf8Decode)
 
       val p = Promise[Boolean]()
-      val callback = new Callback[List[String]] {
+      val callback = new Callback[Throwable, List[String]] {
         override def onSuccess(value: List[String]): Unit = {
           p.success(if (value.mkString == strSeq.mkString) true else false)
         }
@@ -79,7 +80,7 @@ object CodecTest extends SimpleTestSuite {
     val to = Paths.get("src/test/resources/res.txt")
     val consumer = file.writeAsync(to)
     val p = Promise[Long]()
-    val callback = new Callback[Long] {
+    val callback = new Callback[Throwable, Long] {
       override def onSuccess(value: Long): Unit = p.success(value)
       override def onError(ex: Throwable): Unit = p.failure(ex)
     }
