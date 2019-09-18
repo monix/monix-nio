@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 
 private[nio] abstract class AsyncChannelConsumer extends Consumer[Array[Byte], Long] {
   def channel: Option[AsyncChannel]
-  def withInitialPosition: Long = 0l
+  def withInitialPosition: Long = 0L
   def init(subscriber: AsyncChannelSubscriber): Future[Unit] = Future.successful(())
 
   class AsyncChannelSubscriber(consumerCallback: Callback[Throwable, Long])(implicit val scheduler: Scheduler)

@@ -253,7 +253,7 @@ object AsyncSocketChannel {
         try {
           c.read(
             dst,
-            timeout.map(_.length).getOrElse(0l),
+            timeout.map(_.length).getOrElse(0L),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
             cb,
             rwHandler)
@@ -269,7 +269,7 @@ object AsyncSocketChannel {
         try {
           c.write(
             src,
-            timeout.map(_.length).getOrElse(0l),
+            timeout.map(_.length).getOrElse(0L),
             timeout.map(_.unit).getOrElse(TimeUnit.MILLISECONDS),
             cb,
             rwHandler)

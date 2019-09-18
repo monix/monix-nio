@@ -28,8 +28,7 @@ val appSettings = Seq(
     "-language:implicitConversions",
     "-language:experimental.macros",
     // possibly deprecated options
-    "-Ywarn-dead-code",
-    "-Ywarn-inaccessible"
+    "-Ywarn-dead-code"
   ),
 
   // Targeting Java 7, but only for Scala <= 2.11
@@ -57,7 +56,7 @@ val appSettings = Seq(
     case Some((2, majorVersion)) if majorVersion >= 11 =>
       Seq(
         // Turns all warnings into errors ;-)
-        "-Xfatal-warnings",
+        // "-Xfatal-warnings",
         // Enables linter options
         "-Xlint:adapted-args", // warn if an argument list is modified to match the receiver
         "-Xlint:nullary-unit", // warn when nullary methods return Unit
@@ -71,9 +70,7 @@ val appSettings = Seq(
         "-Xlint:poly-implicit-overload", // parametrized overloaded implicit methods are not visible as view bounds
         "-Xlint:option-implicit", // Option.apply used implicit view
         "-Xlint:delayedinit-select", // Selecting member of DelayedInit
-        "-Xlint:by-name-right-associative", // By-name parameter of right associative operator
         "-Xlint:package-object-classes", // Class or object defined in package object
-        "-Xlint:unsound-match" // Pattern match may not be typesafe
       )
     case _ =>
       Seq.empty
