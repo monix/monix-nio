@@ -1,8 +1,5 @@
-import com.typesafe.sbt.pgp.PgpKeys
-
 import scala.xml.Elem
 import scala.xml.transform.{RewriteRule, RuleTransformer}
-import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import ReleaseTransformations._
 
@@ -12,14 +9,14 @@ import sbtrelease.{Version, versionFormatError}
 
 addCommandAlias("release", ";+publishSigned ;sonatypeReleaseAll")
 
-val monixVersion = "3.0.0-RC2"
+val monixVersion = "3.0.0"
 
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
-  scalaVersion := "2.12.8",
-  crossScalaVersions := Seq("2.11.12", "2.12.8"),
+  scalaVersion := "2.12.10",
+  crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.0"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -103,7 +100,7 @@ val appSettings = Seq(
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
 
   resolvers ++= Seq(
-    "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases",
+    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases",
     Resolver.sonatypeRepo("releases")
   ),
 
@@ -114,7 +111,7 @@ val appSettings = Seq(
       .withWarnScalaVersionEviction(false),
   libraryDependencies ++= Seq(
     "io.monix" %% "monix-reactive" % monixVersion,
-    "io.monix" %% "minitest" % "2.2.2" % Test
+    "io.monix" %% "minitest" % "2.7.0" % Test
   ),
 
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
@@ -123,7 +120,6 @@ val appSettings = Seq(
     
   // -- Settings meant for deployment on oss.sonatype.org
 
-  useGpg := false,
   usePgpKeyHex("2673B174C4071B0E"),
   pgpPublicRing := baseDirectory.value / "project" / ".gnupg" / "pubring.gpg",
   pgpSecretRing := baseDirectory.value / "project" / ".gnupg" / "secring.gpg",
@@ -213,8 +209,11 @@ def profile: Project ⇒ Project = pr => cmdlineProfile match {
   case _ => pr.disablePlugins(scoverage.ScoverageSbtPlugin)
 }
 
-val formattingSettings = SbtScalariform.scalariformSettings ++ Seq(
-  ScalariformKeys.preferences := ScalariformKeys.preferences.value
+val formattingSettings = Seq(
+  scalariformAutoformat := true,
+  ScalariformKeys.preferences := ScalariformKeys
+    .preferences
+    .value
     .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
 )
 

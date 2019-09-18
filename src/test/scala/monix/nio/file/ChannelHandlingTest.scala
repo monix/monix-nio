@@ -34,7 +34,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
   }
 
   //we need these ticks for a complete run of an elem
-  private val ticksPerElem = 2
+  private val ticksPerElem = 3
 
   def tick(n: Int)(implicit s: TestScheduler) = (1 to n) map (_ => s.tickOne())
 
@@ -88,7 +88,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     s.tickOne()
 
     //assert(s.state.tasks.isEmpty, "TestScheduler should have no pending tasks")
-    //no other reads should occurre
+    //no other reads should occur
     s.tick()
     assertEquals(readChannel.getBytesReadPosition, 2)
     assertEquals(writeChannel.getBytesWritePosition, 2)
@@ -128,7 +128,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     //next read will create an exception
     readChannel.createReadException()
-    tick(3)
+    tick(ticksPerElem)
     assertEquals(callbackErrorCalled.get, true)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
@@ -167,7 +167,8 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
 
     //next write will create an exception
     writeChannel.createWriteException()
-    tick(5)
+    tick(ticksPerElem)
+    tick(ticksPerElem)
     assertEquals(callbackErrorCalled.get, true)
     assertEquals(readChannel.getBytesReadPosition, 2)
     assertEquals(writeChannel.getBytesWritePosition, 1)
