@@ -215,8 +215,19 @@ val formattingSettings = Seq(
 )
 
 val monixNio = Project(id = "monix-nio", base = file("."))
+  .configure(profile)
   .settings(appSettings)
   .settings(formattingSettings)
+
+val benchmark = Project(id = "monix-nio-benchmarks", base = file("benchmarks"))
   .configure(profile)
+  .dependsOn(monixNio)
   .enablePlugins(JmhPlugin)
+  .settings(formattingSettings)
+  .settings(
+    publishArtifact := false,
+    publishArtifact in (Compile, packageDoc) := false,
+    publishArtifact in (Compile, packageSrc) := false,
+    publishArtifact in (Compile, packageBin) := false
+  )
 

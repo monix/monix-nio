@@ -21,16 +21,16 @@ For the moment the following support has been added:
 
 ```text
 Benchmark                                          Mode  Cnt     Score    Error  Units
-ReadWriteFileBenchmark.read50MiB                     ss   10    52.086 ± 28.819  ms/op
-ReadWriteFileBenchmark.read50MiBJavaNio              ss   10    27.466 ± 10.353  ms/op
-ReadWriteFileBenchmark.read50MiBWith100KiBChunks     ss   10    36.845 ± 17.278  ms/op
-ReadWriteFileBenchmark.read50MiBWith1KiBChunks       ss   10   584.531 ± 56.074  ms/op
-ReadWriteFileBenchmark.read50MiBWith1MiBChunks       ss   10    32.295 ± 12.805  ms/op
-ReadWriteFileBenchmark.write50MiB                    ss   10    79.525 ± 18.076  ms/op
-ReadWriteFileBenchmark.write50MiBJavaNio             ss   10   145.732 ± 29.536  ms/op
-ReadWriteFileBenchmark.write50MiBWith100KiBChunks    ss   10    79.335 ± 18.774  ms/op
-ReadWriteFileBenchmark.write50MiBWith1KiBChunks      ss   10  1401.257 ± 97.858  ms/op
-ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   10    82.181 ± 39.319  ms/op
+ReadWriteFileBenchmark.read50MiB                     ss   20    48.117 ± 18.977  ms/op
+ReadWriteFileBenchmark.read50MiBJavaNio              ss   20    26.214 ±  5.466  ms/op
+ReadWriteFileBenchmark.read50MiBWith100KiBChunks     ss   20    31.444 ±  5.557  ms/op
+ReadWriteFileBenchmark.read50MiBWith1KiBChunks       ss   20   671.649 ± 30.429  ms/op
+ReadWriteFileBenchmark.read50MiBWith1MiBChunks       ss   20    27.124 ±  5.144  ms/op
+ReadWriteFileBenchmark.write50MiB                    ss   20    72.268 ±  6.063  ms/op
+ReadWriteFileBenchmark.write50MiBJavaNio             ss   20   103.007 ±  6.983  ms/op
+ReadWriteFileBenchmark.write50MiBWith100KiBChunks    ss   20    85.844 ±  6.140  ms/op
+ReadWriteFileBenchmark.write50MiBWith1KiBChunks      ss   20  1387.317 ± 21.829  ms/op
+ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   20    82.250 ± 11.939  ms/op
 ```
 - lower is better
 
@@ -41,7 +41,7 @@ ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   10    82.181 ± 39.319
 ### Adding dependency to SBT
 
 ```scala
-libraryDependencies += "io.monix" %% "monix-nio" % "0.0.5"
+libraryDependencies += "io.monix" %% "monix-nio" % "0.0.6"
 ```
 
 ### Read from a text file
