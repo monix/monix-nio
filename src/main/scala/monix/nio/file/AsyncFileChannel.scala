@@ -17,10 +17,9 @@
 
 package monix.nio.file
 
-import java.io.File
 import java.nio.ByteBuffer
 import java.nio.channels.{ AsynchronousFileChannel, CompletionHandler }
-import java.nio.file.StandardOpenOption
+import java.nio.file.{ Path, StandardOpenOption }
 
 import monix.execution.{ Callback, Cancelable, Scheduler }
 import monix.nio.internal.ExecutorServiceWrapper
@@ -181,17 +180,17 @@ object AsyncFileChannel {
     * Opens a channel for the given file reference, returning an
     * [[AsyncFileChannel]] instance for handling reads and writes.
     *
-    * @param file is the file reference to open
+    * @param path is the file reference to open
     * @param options specifies options for opening the file
     *        (e.g. create, append, etc.)
     *
     * @param s is the `Scheduler` used for asynchronous computations
     */
-  def apply(file: File, options: StandardOpenOption*)(implicit s: Scheduler): AsyncFileChannel = {
+  def apply(path: Path, options: StandardOpenOption*)(implicit s: Scheduler): AsyncFileChannel = {
     import scala.collection.JavaConverters._
     new NewIOImplementation(
       AsynchronousFileChannel.open(
-        file.toPath,
+        path,
         options.toSet.asJava,
         ExecutorServiceWrapper(s)))
   }

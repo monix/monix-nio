@@ -1,8 +1,7 @@
 package monix.nio.file
 
-import java.io.File
 import java.nio.ByteBuffer
-import java.nio.file.StandardOpenOption
+import java.nio.file.{ Path, StandardOpenOption }
 
 import monix.eval.Task
 import monix.execution.{ Callback, Scheduler }
@@ -131,15 +130,15 @@ object TaskFileChannel {
     * Opens a channel for the given file reference, returning an
     * [[monix.nio.file.TaskFileChannel TaskFileChannel]] instance for handling reads and writes.
     *
-    * @param file is the file reference to open
+    * @param path is the file reference to open
     * @param options specifies options for opening the file
     *        (e.g. create, append, etc.)
     *
     * @param s is the `Scheduler` used for asynchronous computations
     */
-  def apply(file: File, options: StandardOpenOption*)(implicit s: Scheduler): TaskFileChannel = {
+  def apply(path: Path, options: StandardOpenOption*)(implicit s: Scheduler): TaskFileChannel = {
     new TaskFileChannel {
-      override val asyncFileChannel = AsyncFileChannel.apply(file, options: _*)
+      override val asyncFileChannel = AsyncFileChannel.apply(path, options: _*)
     }
   }
 }
