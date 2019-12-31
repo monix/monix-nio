@@ -27,7 +27,7 @@ package object file {
   def readAsync(path: Path, chunkSize: Int)(implicit s: Scheduler): AsyncFileChannelObservable = {
     require(chunkSize > 1)
 
-    val channel = TaskFileChannel(path.toFile, StandardOpenOption.READ)
+    val channel = TaskFileChannel(path, StandardOpenOption.READ)
     new AsyncFileChannelObservable(channel, chunkSize)
   }
 
@@ -44,7 +44,7 @@ package object file {
     flags: Seq[StandardOpenOption] = Seq.empty)(implicit s: Scheduler): AsyncFileChannelConsumer = {
 
     val flagsWithWriteOptions = flags :+ StandardOpenOption.WRITE :+ StandardOpenOption.CREATE
-    val channel = TaskFileChannel(path.toFile, flagsWithWriteOptions: _*)
+    val channel = TaskFileChannel(path, flagsWithWriteOptions: _*)
     new AsyncFileChannelConsumer(channel, startPosition)
   }
 
