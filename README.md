@@ -41,7 +41,7 @@ ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   20    82.250 ± 11.939
 ### Adding dependency to SBT
 
 ```scala
-libraryDependencies += "io.monix" %% "monix-nio" % "0.0.6"
+libraryDependencies += "io.monix" %% "monix-nio" % "0.0.7"
 ```
 
 ### Read from a text file
