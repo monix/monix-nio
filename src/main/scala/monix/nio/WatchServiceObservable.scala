@@ -56,7 +56,7 @@ abstract class WatchServiceObservable extends Observable[Array[WatchEvent[_]]] {
   }
 
   private def loop(subscriber: Subscriber[Array[WatchEvent[_]]])(implicit scheduler: Scheduler): Task[Array[WatchEvent[_]]] = {
-    import scala.jdk.CollectionConverters._
+    import collection.JavaConverters._
     watchService.map { ws =>
       ws.take()
         .doOnCancel(Task.defer(ws.close()))

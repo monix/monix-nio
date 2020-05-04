@@ -187,7 +187,7 @@ object AsyncFileChannel {
     * @param s is the `Scheduler` used for asynchronous computations
     */
   def apply(path: Path, options: StandardOpenOption*)(implicit s: Scheduler): AsyncFileChannel = {
-    import scala.jdk.CollectionConverters._
+    import scala.collection.JavaConverters._
     new NewIOImplementation(
       AsynchronousFileChannel.open(
         path,
