@@ -23,9 +23,9 @@ import java.util.concurrent.{ AbstractExecutorService, ExecutorService, TimeUnit
 import monix.execution.schedulers.{ ReferenceScheduler, SchedulerService }
 import monix.execution.{ Cancelable, ExecutionModel, Scheduler }
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContextExecutorService }
+import scala.jdk.CollectionConverters._
 
 /**
   * Wraps a Monix `Scheduler` into a Java `ExecutorService`.

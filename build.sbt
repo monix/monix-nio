@@ -9,14 +9,14 @@ import sbtrelease.{Version, versionFormatError}
 
 addCommandAlias("release", ";+publishSigned ;sonatypeReleaseAll")
 
-val monixVersion = "3.0.0"
+val monixVersion = "3.2.1"
 
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
-  scalaVersion := "2.12.10",
-  crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.0"),
+  scalaVersion := "2.13.2",
+  crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.2"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -56,7 +56,7 @@ val appSettings = Seq(
     case Some((2, majorVersion)) if majorVersion >= 11 =>
       Seq(
         // Turns all warnings into errors ;-)
-        // "-Xfatal-warnings",
+        "-Xfatal-warnings",
         // Enables linter options
         "-Xlint:adapted-args", // warn if an argument list is modified to match the receiver
         "-Xlint:nullary-unit", // warn when nullary methods return Unit
@@ -108,7 +108,7 @@ val appSettings = Seq(
       .withWarnScalaVersionEviction(false),
   libraryDependencies ++= Seq(
     "io.monix" %% "monix-reactive" % monixVersion,
-    "io.monix" %% "minitest" % "2.7.0" % Test
+    "io.monix" %% "minitest" % "2.8.2" % Test
   ),
 
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),

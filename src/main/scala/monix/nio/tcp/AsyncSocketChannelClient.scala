@@ -47,7 +47,7 @@ final class AsyncSocketChannelClient(
   bufferSize: Int)(implicit scheduler: Scheduler) {
 
   private var taskSocketChannel: Option[TaskSocketChannel] = None
-  private def this(tsc: TaskSocketChannel, bufferSize: Int)(implicit scheduler: Scheduler) {
+  private def this(tsc: TaskSocketChannel, bufferSize: Int)(implicit scheduler: Scheduler) = {
     this("", 0, bufferSize)
     this.taskSocketChannel = Option(tsc)
   }

@@ -43,7 +43,7 @@ final class AsyncSocketChannelObservable private[tcp] (
   private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
   private[this] var closeOnComplete = true
 
-  private[tcp] def this(tsc: TaskSocketChannel, buffSize: Int, closeWhenDone: Boolean) {
+  private[tcp] def this(tsc: TaskSocketChannel, buffSize: Int, closeWhenDone: Boolean) = {
     this("", 0, buffSize)
     this.taskSocketChannel = Option(tsc)
     this.closeOnComplete = closeWhenDone

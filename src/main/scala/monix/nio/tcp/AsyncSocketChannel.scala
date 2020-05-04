@@ -197,7 +197,7 @@ object AsyncSocketChannel {
 
     private[this] var existingAsyncSocketChannelO: Option[AsynchronousSocketChannel] = None
 
-    private[tcp] def this(asyncSocketChannel: AsynchronousSocketChannel)(implicit scheduler: Scheduler) {
+    private[tcp] def this(asyncSocketChannel: AsynchronousSocketChannel)(implicit scheduler: Scheduler) = {
       this()
       this.existingAsyncSocketChannelO = Option(asyncSocketChannel)
     }

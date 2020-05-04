@@ -40,7 +40,7 @@ final class AsyncSocketChannelConsumer private[tcp] (
   private[this] var taskSocketChannel: Option[TaskSocketChannel] = None
   private[this] var closeOnComplete = true
 
-  private[tcp] def this(tsc: TaskSocketChannel, closeWhenDone: Boolean) {
+  private[tcp] def this(tsc: TaskSocketChannel, closeWhenDone: Boolean) = {
     this("", 0)
     this.taskSocketChannel = Option(tsc)
     this.closeOnComplete = closeWhenDone
