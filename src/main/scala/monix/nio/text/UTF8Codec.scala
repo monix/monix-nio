@@ -60,7 +60,7 @@ object UTF8Codec {
         subscriber.onError(APIContractViolationException(this.getClass.getName))
         Cancelable.empty
       } else {
-        remaining.put(0, 0)
+        remaining.put(0, 0: Byte)
         Cancelable(() => stopOnNext.set(true))
       }
     }
