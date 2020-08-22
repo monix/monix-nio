@@ -21,16 +21,16 @@ For the moment the following support has been added:
 
 ```text
 Benchmark                                          Mode  Cnt     Score    Error  Units
-ReadWriteFileBenchmark.read50MiB                     ss   20    48.117 ± 18.977  ms/op
-ReadWriteFileBenchmark.read50MiBJavaNio              ss   20    26.214 ±  5.466  ms/op
-ReadWriteFileBenchmark.read50MiBWith100KiBChunks     ss   20    31.444 ±  5.557  ms/op
-ReadWriteFileBenchmark.read50MiBWith1KiBChunks       ss   20   671.649 ± 30.429  ms/op
-ReadWriteFileBenchmark.read50MiBWith1MiBChunks       ss   20    27.124 ±  5.144  ms/op
-ReadWriteFileBenchmark.write50MiB                    ss   20    72.268 ±  6.063  ms/op
-ReadWriteFileBenchmark.write50MiBJavaNio             ss   20   103.007 ±  6.983  ms/op
-ReadWriteFileBenchmark.write50MiBWith100KiBChunks    ss   20    85.844 ±  6.140  ms/op
-ReadWriteFileBenchmark.write50MiBWith1KiBChunks      ss   20  1387.317 ± 21.829  ms/op
-ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   20    82.250 ± 11.939  ms/op
+ReadWriteFileBenchmark.read50MiB                     ss   40   191.350 ± 27.611  ms/op
+ReadWriteFileBenchmark.read50MiBJavaNio              ss   40    59.288 ±  5.068  ms/op
+ReadWriteFileBenchmark.read50MiBWith100KiBChunks     ss   40    44.501 ±  3.135  ms/op
+ReadWriteFileBenchmark.read50MiBWith1KiBChunks       ss   40  1066.369 ± 43.585  ms/op
+ReadWriteFileBenchmark.read50MiBWith1MiBChunks       ss   40    48.777 ±  3.725  ms/op
+ReadWriteFileBenchmark.write50MiB                    ss   40   259.731 ± 10.388  ms/op
+ReadWriteFileBenchmark.write50MiBJavaNio             ss   40   304.585 ± 15.283  ms/op
+ReadWriteFileBenchmark.write50MiBWith100KiBChunks    ss   40   258.719 ± 20.431  ms/op
+ReadWriteFileBenchmark.write50MiBWith1KiBChunks      ss   40  2414.812 ± 23.128  ms/op
+ReadWriteFileBenchmark.write50MiBWith1MiBChunks      ss   40   255.028 ±  9.261  ms/op
 ```
 - lower is better
 

@@ -9,14 +9,14 @@ import sbtrelease.{Version, versionFormatError}
 
 addCommandAlias("release", ";+publishSigned ;sonatypeReleaseAll")
 
-val monixVersion = "3.2.1"
+val monixVersion = "3.2.2"
 
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
-  scalaVersion := "2.13.2",
-  crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.2"),
+  scalaVersion := "2.13.3",
+  crossScalaVersions := Seq("2.11.12", "2.12.12", "2.13.3"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -61,7 +61,6 @@ val appSettings = Seq(
         "-Xlint:adapted-args", // warn if an argument list is modified to match the receiver
         "-Xlint:nullary-unit", // warn when nullary methods return Unit
         "-Xlint:inaccessible", // warn about inaccessible types in method signatures
-        "-Xlint:nullary-override", // warn when non-nullary `def f()' overrides nullary `def f'
         "-Xlint:infer-any", // warn when a type argument is inferred to be `Any`
         "-Xlint:missing-interpolator", // a string literal appears to be missing an interpolator id
         "-Xlint:doc-detached", // a ScalaDoc comment appears to be detached from its element
@@ -114,7 +113,7 @@ val appSettings = Seq(
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
 
   updateOptions := updateOptions.value.withGigahorse(false),
-    
+
   // -- Settings meant for deployment on oss.sonatype.org
 
   usePgpKeyHex("2673B174C4071B0E"),
@@ -225,6 +224,7 @@ val benchmark = Project(id = "monix-nio-benchmarks", base = file("benchmarks"))
   .enablePlugins(JmhPlugin)
   .settings(formattingSettings)
   .settings(
+    scalaVersion := "2.13.3",
     publishArtifact := false,
     publishArtifact in (Compile, packageDoc) := false,
     publishArtifact in (Compile, packageSrc) := false,
