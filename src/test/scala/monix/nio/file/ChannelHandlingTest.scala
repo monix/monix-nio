@@ -55,7 +55,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     s.tick()
     assert(readChannel.isClosed)
     assert(writeChannel.isClosed)
-    assertEquals(writeTo.get.flatten, readBytes.flatten)
+    assertEquals(writeTo.get().flatten, readBytes.flatten)
     assertEquals(readChannel.getBytesReadPosition, writeChannel.getBytesWritePosition)
   }
 
@@ -77,12 +77,12 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
-    assertEquals(writeTo.get.size, 1)
+    assertEquals(writeTo.get().size, 1)
 
     tick(ticksPerElem)
 
     //check 2 reads have occurred
-    assert(writeTo.get.size == 2)
+    assert(writeTo.get().size == 2)
     //cancel the consumer
     cancelable.cancel()
     s.tickOne()
@@ -92,7 +92,7 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     s.tick()
     assertEquals(readChannel.getBytesReadPosition, 2)
     assertEquals(writeChannel.getBytesWritePosition, 2)
-    assertEquals(writeTo.get.size, 2)
+    assertEquals(writeTo.get().size, 2)
     assert(readChannel.isClosed)
     assert(writeChannel.isClosed)
     //check no other read has occurred
@@ -123,13 +123,13 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
-    assertEquals(writeTo.get.size, 1)
-    assertEquals(callbackErrorCalled.get, false)
+    assertEquals(writeTo.get().size, 1)
+    assertEquals(callbackErrorCalled.get(), false)
 
     //next read will create an exception
     readChannel.createReadException()
     tick(ticksPerElem)
-    assertEquals(callbackErrorCalled.get, true)
+    assertEquals(callbackErrorCalled.get(), true)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assert(readChannel.isClosed)
@@ -162,14 +162,14 @@ object ChannelHandlingTest extends TestSuite[TestScheduler] {
     tick(ticksPerElem)
     assertEquals(readChannel.getBytesReadPosition, 1)
     assertEquals(writeChannel.getBytesWritePosition, 1)
-    assertEquals(writeTo.get.size, 1)
-    assertEquals(callbackErrorCalled.get, false)
+    assertEquals(writeTo.get().size, 1)
+    assertEquals(callbackErrorCalled.get(), false)
 
     //next write will create an exception
     writeChannel.createWriteException()
     tick(ticksPerElem)
     tick(ticksPerElem)
-    assertEquals(callbackErrorCalled.get, true)
+    assertEquals(callbackErrorCalled.get(), true)
     assertEquals(readChannel.getBytesReadPosition, 2)
     assertEquals(writeChannel.getBytesWritePosition, 1)
     assert(readChannel.isClosed)

@@ -50,9 +50,9 @@ class FileChannelForTesting(
     private val readException = Atomic(false)
     private val writeException = Atomic(false)
 
-    def isClosed = channelClosed.get
-    def getBytesReadPosition = readChannelPosition.get
-    def getBytesWritePosition = writeChannelPosition.get
+    def isClosed = channelClosed.get()
+    def getBytesReadPosition = readChannelPosition.get()
+    def getBytesWritePosition = writeChannelPosition.get()
     def createReadException() = readException.set(true)
     def createWriteException() = writeException.set(true)
 
@@ -65,8 +65,8 @@ class FileChannelForTesting(
     override def flush(writeMetaData: Boolean, cb: Callback[Throwable, Unit]): Unit = ???
     override def size(cb: Callback[Throwable, Long]): Unit = () //not really used
     override def read(dst: ByteBuffer, position: Long, handler: Callback[Throwable, Int]) = {
-      if (readException.get) handler.onError(new Exception("Test Exception"))
-      else if (readChannelPosition.get < readingSeq.size) {
+      if (readException.get()) handler.onError(new Exception("Test Exception"))
+      else if (readChannelPosition.get() < readingSeq.size) {
         val pos = readChannelPosition.getAndIncrement()
 
         val r = Task {
@@ -81,7 +81,7 @@ class FileChannelForTesting(
 
     }
     override def write(b: ByteBuffer, position: Long, handler: Callback[Throwable, Int]) = {
-      if (writeException.get) handler.onError(new Exception("Test Exception"))
+      if (writeException.get()) handler.onError(new Exception("Test Exception"))
       else {
         val pos = writeChannelPosition.getAndIncrement()
         val r = Task {

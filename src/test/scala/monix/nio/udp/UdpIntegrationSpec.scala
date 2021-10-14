@@ -7,13 +7,11 @@ import monix.eval.Task
 import monix.execution.Ack
 import monix.execution.Ack.{ Continue, Stop }
 import monix.reactive.Observable
+import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
-
 object UdpIntegrationSpec extends SimpleTestSuite {
-  implicit val ctx = monix.execution.Scheduler.Implicits.global
-
   test("send and receive UDP packets successfully") {
     val data = Array.fill(8)("monix")
 

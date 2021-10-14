@@ -53,7 +53,7 @@ object UTF8Codec {
     val remaining = ByteBuffer.allocate(4)
 
     override def size: Int =
-      if (subscriber.get.nonEmpty) 1 else 0
+      if (subscriber.get().nonEmpty) 1 else 0
 
     override def unsafeSubscribeFn(subscriber: Subscriber[String]): Cancelable = {
       if (!this.subscriber.compareAndSet(None, Some(subscriber))) {
@@ -65,11 +65,11 @@ object UTF8Codec {
       }
     }
 
-    override def onError(ex: Throwable): Unit = subscriber.get.foreach(_.onError(ex))
-    override def onComplete(): Unit = subscriber.get.foreach(_.onComplete())
+    override def onError(ex: Throwable): Unit = subscriber.get().foreach(_.onError(ex))
+    override def onComplete(): Unit = subscriber.get().foreach(_.onComplete())
 
     override def onNext(elem: Array[Byte]): Future[Ack] = {
-      if (stopOnNext.get || subscriber.get.isEmpty) {
+      if (stopOnNext.get() || subscriber.get().isEmpty) {
         //we stop if no subscriber or canceled from outside
         Stop
       } else {
@@ -82,7 +82,7 @@ object UTF8Codec {
         remaining.put(newRemaining.length.toByte)
         remaining.put(newRemaining)
         current match {
-          case Some(str) => subscriber.get.get.onNext(str)
+          case Some(str) => subscriber.get().get.onNext(str)
           case _ => Continue
         }
       }
@@ -136,7 +136,7 @@ object UTF8Codec {
     private[this] val subscriber = Atomic(Option.empty[Subscriber[Array[Byte]]])
     private[this] val stopOnNext = Atomic(false)
 
-    override def size: Int = if (subscriber.get.nonEmpty) 1 else 0
+    override def size: Int = if (subscriber.get().nonEmpty) 1 else 0
 
     override def unsafeSubscribeFn(subscriber: Subscriber[Array[Byte]]): Cancelable = {
       if (!this.subscriber.compareAndSet(None, Some(subscriber))) {
@@ -147,15 +147,15 @@ object UTF8Codec {
       }
     }
 
-    override def onError(ex: Throwable): Unit = subscriber.get.foreach(_.onError(ex))
-    override def onComplete(): Unit = subscriber.get.foreach(_.onComplete())
+    override def onError(ex: Throwable): Unit = subscriber.get().foreach(_.onError(ex))
+    override def onComplete(): Unit = subscriber.get().foreach(_.onComplete())
 
     override def onNext(elem: String): Future[Ack] = {
-      if (stopOnNext.get || subscriber.get.isEmpty) {
+      if (stopOnNext.get() || subscriber.get().isEmpty) {
         //we stop if no subscriber or canceled from outside
         Stop
       } else {
-        subscriber.get.get.onNext(elem.getBytes(utf8Charset))
+        subscriber.get().get.onNext(elem.getBytes(utf8Charset))
       }
     }
   }
