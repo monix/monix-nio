@@ -8,13 +8,12 @@ import monix.execution.Ack.{ Continue, Stop }
 import monix.execution.Callback
 import monix.execution.atomic.Atomic
 import monix.reactive.{ Consumer, Observable }
+import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
 
 object TcpIntegrationSpec extends SimpleTestSuite {
-  implicit val ctx = monix.execution.Scheduler.Implicits.global
-
   test("connect and read from a TCP source successfully") {
     val wp = Promise[Boolean]()
     val rp = Promise[Boolean]()
@@ -157,7 +156,7 @@ object TcpIntegrationSpec extends SimpleTestSuite {
           err => doneP.failure(err),
           () => {
             taskServerSocketChannel.close()
-            doneP.success(echoed.get)
+            doneP.success(echoed.get())
           })
       }.runToFuture
 

@@ -6,12 +6,11 @@ import java.nio.file.{ Paths, WatchEvent }
 import minitest.SimpleTestSuite
 import monix.eval.Task
 import monix.execution.Ack.{ Continue, Stop }
+import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
 object WatchServiceTest extends SimpleTestSuite {
-  implicit val ctx = monix.execution.Scheduler.Implicits.global
-
   test("file event captured") {
     val path = Paths.get(System.getProperty("java.io.tmpdir"))
 

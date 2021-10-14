@@ -9,14 +9,14 @@ import sbtrelease.{Version, versionFormatError}
 
 addCommandAlias("release", ";+publishSigned ;sonatypeReleaseAll")
 
-val monixVersion = "3.2.2"
+val monixVersion = "3.4.0"
 
 val appSettings = Seq(
   name := "monix-nio",
   organization := "io.monix",
 
   scalaVersion := "2.13.3",
-  crossScalaVersions := Seq("2.11.12", "2.12.12", "2.13.3"),
+  crossScalaVersions := Seq("2.12.12", "2.13.3", "3.0.2"),
 
   scalacOptions ++= Seq(
     // warnings
@@ -27,33 +27,22 @@ val appSettings = Seq(
     "-language:higherKinds",
     "-language:implicitConversions",
     "-language:experimental.macros",
-    // possibly deprecated options
-    "-Ywarn-dead-code"
   ),
-
-  // Targeting Java 7, but only for Scala <= 2.11
-  javacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, majorVersion)) if majorVersion <= 11 =>
-      // generates code with the Java 6 class format
-      Seq("-source", "1.7", "-target", "1.7")
-    case _ =>
-      // For 2.12 we are targeting the Java 8 class format
-      Seq("-source", "1.8", "-target", "1.8")
-  }),
-
-  // Targeting Java 7, but only for Scala <= 2.11
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, majorVersion)) if majorVersion <= 11 =>
-      // Generates code with the Java 7 class format
-      Seq("-target:jvm-1.7")
+    case Some((2, _)) =>
+      Seq(
+        // possibly deprecated options
+        "-Ywarn-dead-code"
+      )
     case _ =>
-      // For 2.12 we are targeting the Java 8 class format, the default
       Seq.empty
   }),
 
+  javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
+
   // Linter
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, majorVersion)) if majorVersion >= 11 =>
+    case Some((2, _)) =>
       Seq(
         // Turns all warnings into errors ;-)
         // "-Xfatal-warnings",
@@ -69,18 +58,18 @@ val appSettings = Seq(
         "-Xlint:poly-implicit-overload", // parametrized overloaded implicit methods are not visible as view bounds
         "-Xlint:option-implicit", // Option.apply used implicit view
         "-Xlint:delayedinit-select", // Selecting member of DelayedInit
-        "-Xlint:package-object-classes", // Class or object defined in package object
+        "-Xlint:package-object-classes" // Class or object defined in package object
       )
     case _ =>
       Seq.empty
   }),
 
   // Turning off fatal warnings for ScalaDoc, otherwise we can't release.
-  scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
+  Compile / doc / scalacOptions ~= (_ filterNot (_ == "-Xfatal-warnings")),
 
   // ScalaDoc settings
   autoAPIMappings := true,
-  scalacOptions in ThisBuild ++= Seq(
+  ThisBuild / scalacOptions ++= Seq(
     // Note, this is used by the doc-source-url feature to determine the
     // relative path of a given source file. If it's not a prefix of a the
     // absolute path of the source file, the absolute path of that file
@@ -89,25 +78,25 @@ val appSettings = Seq(
     "-sourcepath", file(".").getAbsolutePath.replaceAll("[.]$", "")
   ),
 
-  parallelExecution in Test := false,
-  parallelExecution in IntegrationTest := false,
-  testForkedParallel in Test := false,
-  testForkedParallel in IntegrationTest := false,
-  concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
+  Test / parallelExecution := false,
+  IntegrationTest / parallelExecution := false,
+  Test / testForkedParallel := false,
+  IntegrationTest / testForkedParallel := false,
+  Global / concurrentRestrictions += Tags.limit(Tags.Test, 1),
 
   resolvers ++= Seq(
     "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases",
     Resolver.sonatypeRepo("releases")
   ),
 
-  evictionWarningOptions in update :=
+  update / evictionWarningOptions :=
     EvictionWarningOptions.default
       .withWarnTransitiveEvictions(false)
       .withWarnDirectEvictions(false)
       .withWarnScalaVersionEviction(false),
   libraryDependencies ++= Seq(
     "io.monix" %% "monix-reactive" % monixVersion,
-    "io.monix" %% "minitest" % "2.8.2" % Test
+    "io.monix" %% "minitest" % "2.9.6" % Test
   ),
 
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
@@ -150,7 +139,7 @@ val appSettings = Seq(
       Some("releases"  at nexus + "service/local/staging/deploy/maven2")
   },
 
-  publishArtifact in Test := false,
+  Test / publishArtifact := false,
   pomIncludeRepository := { _ => false }, // removes optional dependencies
 
   // For evicting Scoverage out of the generated POM
@@ -226,8 +215,8 @@ val benchmark = Project(id = "monix-nio-benchmarks", base = file("benchmarks"))
   .settings(
     scalaVersion := "2.13.3",
     publishArtifact := false,
-    publishArtifact in (Compile, packageDoc) := false,
-    publishArtifact in (Compile, packageSrc) := false,
-    publishArtifact in (Compile, packageBin) := false
+    Compile / packageDoc / publishArtifact := false,
+    Compile / packageSrc / publishArtifact := false,
+    Compile / packageBin / publishArtifact := false
   )
 

@@ -212,7 +212,7 @@ object AsyncFileChannel {
       cancelable.cancel()
 
     override def size(cb: Callback[Throwable, Long]): Unit =
-      scheduler.executeAsync { () =>
+      scheduler.execute { () =>
         var streamErrors = true
         try {
           val size = underlying.size()
@@ -243,7 +243,7 @@ object AsyncFileChannel {
     }
 
     override def flush(metaData: Boolean, cb: Callback[Throwable, Unit]): Unit =
-      scheduler.executeAsync { () =>
+      scheduler.execute { () =>
         try blocking {
           underlying.force(true)
           cb.onSuccess(())
